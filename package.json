@@ -1,0 +1,84 @@
+{
+  "name": "loupe",
+  "displayName": "Loupe",
+  "description": "Quickly find and open files in gitignored sub-repositories",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Loupe",
+      "properties": {
+        "loupe.maxDepth": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Maximum directory depth to scan for sub-repositories with .git"
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "loupe.fileTreeView",
+          "name": "Loupe"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "loupe.focus",
+        "title": "Loupe: Focus"
+      },
+      {
+        "command": "loupe.selectRepo",
+        "title": "Loupe: Select Repository",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "loupe.refresh",
+        "title": "Loupe: Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "loupe.selectRepo",
+          "when": "view == loupe.fileTreeView",
+          "group": "navigation"
+        },
+        {
+          "command": "loupe.refresh",
+          "when": "view == loupe.fileTreeView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "loupe.focus",
+        "key": "ctrl+g ctrl+g",
+        "mac": "cmd+g cmd+g"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx @vscode/vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0"
+  }
+}
