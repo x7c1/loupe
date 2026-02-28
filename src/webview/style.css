@@ -1,0 +1,165 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.search-container {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border, transparent));
+  flex-shrink: 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 4px 6px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  outline: none;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.search-input:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.search-input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.list-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 22px;
+  height: 22px;
+}
+
+.list-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.list-item.focused {
+  background: var(--vscode-list-focusBackground, var(--vscode-list-activeSelectionBackground, #04395e));
+  color: var(--vscode-list-focusForeground, var(--vscode-list-activeSelectionForeground, #fff));
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+}
+
+.list-item .icon {
+  width: 16px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  text-align: center;
+}
+
+.list-item .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-item .desc {
+  margin-left: 8px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  padding: 2px 0;
+  padding-right: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 22px;
+  height: 22px;
+}
+
+.tree-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.tree-item.focused {
+  background: var(--vscode-list-focusBackground, var(--vscode-list-activeSelectionBackground, #04395e));
+  color: var(--vscode-list-focusForeground, var(--vscode-list-activeSelectionForeground, #fff));
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+}
+
+.tree-item .toggle {
+  width: 16px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--vscode-foreground);
+  user-select: none;
+}
+
+.tree-item .toggle.collapsed::before { content: "\25B6"; }
+.tree-item .toggle.expanded::before { content: "\25BC"; }
+.tree-item .toggle.leaf { visibility: hidden; }
+
+.tree-item .icon {
+  width: 16px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.tree-item .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-items {
+  padding: 16px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+}
+
+.depth-0 { padding-left: 8px; }
+.depth-1 { padding-left: 24px; }
+.depth-2 { padding-left: 40px; }
+.depth-3 { padding-left: 56px; }
+.depth-4 { padding-left: 72px; }
+.depth-5 { padding-left: 88px; }
+.depth-6 { padding-left: 104px; }
+.depth-7 { padding-left: 120px; }
+.depth-8 { padding-left: 136px; }
+.depth-9 { padding-left: 152px; }
+.depth-10 { padding-left: 168px; }
+.depth-11 { padding-left: 184px; }
+.depth-12 { padding-left: 200px; }
+.depth-13 { padding-left: 216px; }
+.depth-14 { padding-left: 232px; }
+.depth-15 { padding-left: 248px; }
+.depth-16 { padding-left: 264px; }
+.depth-17 { padding-left: 280px; }
+.depth-18 { padding-left: 296px; }
+.depth-19 { padding-left: 312px; }
+.depth-20 { padding-left: 328px; }

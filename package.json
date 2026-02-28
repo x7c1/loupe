@@ -72,7 +72,8 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p ./",
+    "copy-webview": "cp src/webview/style.css out/webview/",
+    "compile": "tsc -p ./ && tsc -p tsconfig.webview.json && npm run copy-webview",
     "watch": "tsc -watch -p ./",
     "package": "npx @vscode/vsce package --allow-missing-repository"
   },

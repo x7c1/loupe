@@ -9,5 +9,5 @@
     "strict": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "out"]
+  "exclude": ["node_modules", "out", "src/webview/main.ts"]
 }
