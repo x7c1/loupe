@@ -1,10 +1,5 @@
 import * as vscode from "vscode";
-
-interface RepoEntry {
-  path: string;
-  label: string;
-  description: string;
-}
+import type { RepoItem } from "./types";
 
 type WebviewMessage =
   | { type: "openFile"; path: string }
@@ -15,7 +10,7 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "loupe.fileTreeView";
 
   private view?: vscode.WebviewView;
-  private repos: RepoEntry[] = [];
+  private repos: RepoItem[] = [];
   private files: string[] = [];
   private repoPath: string = "";
   private repoName: string = "";
@@ -75,7 +70,7 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     return { repoPath: this.repoPath, repoName: this.repoName };
   }
 
-  public setRepos(repos: RepoEntry[]): void {
+  public setRepos(repos: RepoItem[]): void {
     this.repos = repos;
     this.repoPath = "";
     this.repoName = "";

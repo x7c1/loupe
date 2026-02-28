@@ -4,9 +4,9 @@ A VS Code extension to find and open files in gitignored sub-repositories.
 
 ## Problem
 
-When a workspace contains cloned sub-repositories excluded by the parent `.gitignore`, VS Code's built-in file search (`Ctrl+P`) and text search (`Ctrl+Shift+F`) skip those files. Setting `search.useIgnoreFiles: false` floods results with `node_modules` and other noise.
+When a workspace contains cloned sub-repositories excluded by the parent `.gitignore`, VS Code's built-in file search (`Ctrl+P`) skips those files. Setting `search.useIgnoreFiles: false` floods results with `node_modules` and other noise.
 
-Loupe solves this by scanning for `.git` directories and listing their tracked and untracked files in a searchable tree view.
+Loupe provides file search for these sub-repositories by scanning for `.git` directories and listing their tracked and untracked files in a searchable tree view.
 
 ## Features
 
@@ -40,16 +40,11 @@ Loupe solves this by scanning for `.git` directories and listing their tracked a
 
 ## Installation
 
-Download the `.vsix` file from [Releases](https://github.com/x7c1/loupe/releases) and install:
-
-```bash
-code --install-extension loupe-*.vsix
-```
-
-## Development
+Build from source:
 
 ```bash
 npm install
 npm run compile
 npm run package
+code --install-extension loupe-*.vsix
 ```

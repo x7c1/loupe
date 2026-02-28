@@ -72,14 +72,15 @@
     ]
   },
   "scripts": {
-    "copy-webview": "cp src/webview/style.css out/webview/",
-    "compile": "tsc -p ./ && tsc -p tsconfig.webview.json && npm run copy-webview",
-    "watch": "tsc -watch -p ./",
+    "build-webview": "esbuild src/webview/main.ts --bundle --outfile=out/webview/main.js --format=iife --target=es2020 && cp src/webview/style.css out/webview/",
+    "compile": "tsc -p ./ && npm run build-webview",
+    "watch": "tsc -watch -p ./ & esbuild src/webview/main.ts --bundle --outfile=out/webview/main.js --format=iife --target=es2020 --watch",
     "package": "npx @vscode/vsce package --allow-missing-repository"
   },
   "devDependencies": {
-    "@types/vscode": "^1.80.0",
     "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.27.3",
     "typescript": "^5.0.0"
   }
 }

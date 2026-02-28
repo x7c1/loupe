@@ -8,6 +8,6 @@
     "rootDir": "src",
     "strict": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "out", "src/webview/main.ts"]
+  "include": ["src/*.ts", "src/webview/viewProvider.ts"],
+  "exclude": ["node_modules", "out"]
 }

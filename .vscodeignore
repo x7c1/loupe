@@ -3,5 +3,7 @@
 !package.json
 !README.md
 !LICENSE
-!out/**/*.js
-!out/**/*.css
+!out/*.js
+!out/webview/viewProvider.js
+!out/webview/main.js
+!out/webview/style.css
