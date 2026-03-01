@@ -4,7 +4,7 @@ A VS Code extension to find and open files in gitignored sub-repositories.
 
 ## Demo
 
-<video src="https://github.com/x7c1/loupe/raw/main/assets/demo.webm" controls></video>
+<video src="https://github.com/user-attachments/assets/df84942a-1643-451f-bdb1-281fbd3fac30" controls></video>
 
 ## Problem
 
