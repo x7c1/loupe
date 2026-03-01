@@ -3,6 +3,10 @@
   "displayName": "Loupe",
   "description": "Quickly find and open files in gitignored sub-repositories",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/x7c1/loupe.git"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
