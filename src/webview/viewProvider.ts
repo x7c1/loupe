@@ -12,6 +12,7 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private repos: RepoItem[] = [];
   private files: string[] = [];
+  private activeFile: string = "";
   private repoPath: string = "";
   private repoName: string = "";
   private repoSelectedCallback?: (
@@ -90,11 +91,13 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
   public setFiles(
     repoPath: string,
     repoName: string,
-    files: string[]
+    files: string[],
+    activeFile?: string
   ): void {
     this.repoPath = repoPath;
     this.repoName = repoName;
     this.files = files;
+    this.activeFile = activeFile ?? "";
     this.renderHtml();
   }
 
@@ -152,7 +155,8 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
       mode: ${JSON.stringify(mode)},
       repos: ${JSON.stringify(this.repos)},
       files: ${JSON.stringify(this.files)},
-      repoName: ${JSON.stringify(this.repoName)}
+      repoName: ${JSON.stringify(this.repoName)},
+      activeFile: ${JSON.stringify(this.activeFile)}
     };
   </script>
   <script nonce="${nonce}" src="${scriptUri}"></script>

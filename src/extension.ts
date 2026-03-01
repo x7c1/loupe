@@ -34,8 +34,12 @@ export function activate(context: vscode.ExtensionContext) {
           ? provider.getSelectedRepo()
           : null;
         if (!current || current.repoPath !== matched.path) {
+          const activePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+          const activeFile = activePath
+            ? path.relative(matched.path, activePath)
+            : undefined;
           const files = await loadFiles(matched.path, matched.label);
-          provider.setFiles(matched.path, matched.label, files);
+          provider.setFiles(matched.path, matched.label, files, activeFile);
         }
       } else if (!provider.hasSelectedRepo()) {
         // No active file match and no repo selected - show repo list
