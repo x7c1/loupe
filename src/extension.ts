@@ -22,9 +22,24 @@ export function activate(context: vscode.ExtensionContext) {
         "loupe.fileTreeView.focus"
       );
 
-      // If no repos have been sent yet, scan and send
       if (!provider.hasRepos()) {
-        await scanAndSendRepos(provider);
+        const repos = await scanRepos();
+        provider.storeRepos(repos);
+      }
+
+      const matched = findRepoForActiveEditor(provider.getRepos());
+      if (matched) {
+        // Switch repo if different from current selection
+        const current = provider.hasSelectedRepo()
+          ? provider.getSelectedRepo()
+          : null;
+        if (!current || current.repoPath !== matched.path) {
+          const files = await loadFiles(matched.path, matched.label);
+          provider.setFiles(matched.path, matched.label, files);
+        }
+      } else if (!provider.hasSelectedRepo()) {
+        // No active file match and no repo selected - show repo list
+        provider.showRepoList();
       }
 
       provider.focusInput();
@@ -66,10 +81,17 @@ export function activate(context: vscode.ExtensionContext) {
 async function scanAndSendRepos(
   provider: FileTreeViewProvider
 ): Promise<void> {
+  const repos = await scanRepos();
+  provider.setRepos(repos);
+}
+
+async function scanRepos(): Promise<
+  { path: string; label: string; description: string }[]
+> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders || workspaceFolders.length === 0) {
     vscode.window.showWarningMessage("No workspace folder is open.");
-    return;
+    return [];
   }
 
   const config = vscode.workspace.getConfiguration("loupe");
@@ -101,7 +123,31 @@ async function scanAndSendRepos(
   );
 
   repos.sort((a, b) => a.label.localeCompare(b.label));
-  provider.setRepos(repos);
+  return repos;
+}
+
+function findRepoForActiveEditor(
+  repos: { path: string; label: string }[]
+): { path: string; label: string } | undefined {
+  const activePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+  if (!activePath) {
+    return undefined;
+  }
+
+  // Pick the most specific match (longest repo path) for nested repos
+  let best: { path: string; label: string } | undefined;
+  let bestLen = 0;
+
+  for (const repo of repos) {
+    if (
+      activePath.startsWith(repo.path + "/") &&
+      repo.path.length > bestLen
+    ) {
+      best = { path: repo.path, label: repo.label };
+      bestLen = repo.path.length;
+    }
+  }
+  return best;
 }
 
 async function loadFiles(

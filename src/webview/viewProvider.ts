@@ -70,6 +70,15 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     return { repoPath: this.repoPath, repoName: this.repoName };
   }
 
+  public getRepos(): RepoItem[] {
+    return this.repos;
+  }
+
+  // Store repos without rendering (used when auto-selecting a repo)
+  public storeRepos(repos: RepoItem[]): void {
+    this.repos = repos;
+  }
+
   public setRepos(repos: RepoItem[]): void {
     this.repos = repos;
     this.repoPath = "";
