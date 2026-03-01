@@ -1,5 +1,6 @@
 import { FlatItem, RepoItem } from "./types";
 import { filterRepos, filterFiles } from "./filter";
+import { TreeNode } from "./types";
 import { buildTree, flattenTree } from "./tree";
 
 export interface RenderContext {
@@ -52,8 +53,12 @@ function renderFiles(ctx: RenderContext): void {
   const isFiltered = query.length > 0;
   const filtered = filterFiles(ctx.allFiles, query);
   const tree = buildTree(filtered);
-  const autoExpand = isFiltered && filtered.length <= 100;
-  ctx.visibleItems = flattenTree(tree, 0, [], autoExpand, ctx.expandedDirs, ctx.manuallyCollapsed);
+  const singleDir = isSingleDirRoot(tree);
+  const autoExpand = isFiltered && (filtered.length <= 100 || singleDir);
+  const allItems = flattenTree(tree, 0, [], autoExpand, ctx.expandedDirs, ctx.manuallyCollapsed);
+  const maxVisible = 100;
+  const truncated = singleDir && allItems.length > maxVisible;
+  ctx.visibleItems = truncated ? allItems.slice(0, maxVisible) : allItems;
 
   if (ctx.visibleItems.length === 0) {
     ctx.listContainer.innerHTML = '<div class="no-items">' +
@@ -61,7 +66,7 @@ function renderFiles(ctx: RenderContext): void {
     return;
   }
 
-  ctx.listContainer.innerHTML = ctx.visibleItems.map((item, i) => {
+  let html = ctx.visibleItems.map((item, i) => {
     const dc = "depth-" + Math.min(item.depth, 20);
     const tc = item.isDir
       ? (item.isExpanded ? "toggle expanded" : "toggle collapsed")
@@ -76,6 +81,17 @@ function renderFiles(ctx: RenderContext): void {
       + '<span class="label">' + esc(item.name) + '</span>'
       + badge + '</div>';
   }).join("");
+  if (truncated) {
+    const visibleFiles = ctx.visibleItems.filter(item => !item.isDir).length;
+    const remainingFiles = filtered.length - visibleFiles;
+    html += '<div class="no-items">\u2026 ' + remainingFiles + ' more files</div>';
+  }
+  ctx.listContainer.innerHTML = html;
+}
+
+function isSingleDirRoot(tree: TreeNode): boolean {
+  const children = Array.from(tree.children.values());
+  return children.length === 1 && children[0].isDir;
 }
 
 function esc(t: string): string {

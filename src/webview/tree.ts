@@ -38,6 +38,11 @@ function countFiles(node: TreeNode): number {
   return count;
 }
 
+function hasSingleDirChild(node: TreeNode): boolean {
+  const children = Array.from(node.children.values());
+  return children.length === 1 && children[0].isDir;
+}
+
 export function flattenTree(
   node: TreeNode,
   depth: number,
@@ -50,10 +55,11 @@ export function flattenTree(
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
+  const parentIsSingleDir = hasSingleDirChild(node);
   for (const child of sorted) {
-    const isExp = autoExpand
+    const isExp = (child.isDir && parentIsSingleDir) || (autoExpand
       ? !manuallyCollapsed.has(child.path)
-      : expandedDirs.has(child.path);
+      : expandedDirs.has(child.path));
     result.push({
       path: child.path, name: child.name, isDir: child.isDir,
       depth, isExpanded: isExp,

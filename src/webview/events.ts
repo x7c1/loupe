@@ -49,9 +49,11 @@ function setupKeyboard(ctx: EventContext): void {
       e.preventDefault();
       e.stopPropagation();
       if (ctx.searchInput.value.length > 0) {
-        ctx.searchInput.value = "";
+        const val = ctx.searchInput.value;
+        const lastSpace = val.lastIndexOf(" ");
+        ctx.searchInput.value = lastSpace === -1 ? "" : val.slice(0, lastSpace);
         ctx.focusedIndex = -1;
-        ctx.expandedDirs.clear();
+        ctx.manuallyCollapsed.clear();
         render(ctx);
       } else if (ctx.mode === "files") {
         ctx.vscode.postMessage({ type: "goBack" });
