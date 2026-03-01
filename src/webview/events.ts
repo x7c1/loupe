@@ -37,6 +37,7 @@ function setupClick(ctx: EventContext): void {
     const el = (e.target as HTMLElement).closest("[data-index]") as HTMLElement | null;
     if (!el) return;
     ctx.focusedIndex = parseInt(el.dataset.index!, 10);
+    render(ctx);
     acceptFocused(ctx);
   });
 }
