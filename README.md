@@ -2,6 +2,10 @@
 
 A VS Code extension to find and open files in gitignored sub-repositories.
 
+## Demo
+
+<video src="assets/demo.webm" controls></video>
+
 ## Problem
 
 When a workspace contains cloned sub-repositories excluded by the parent `.gitignore`, VS Code's built-in file search (`Ctrl+P`) skips those files. Setting `search.useIgnoreFiles: false` floods results with `node_modules` and other noise.
