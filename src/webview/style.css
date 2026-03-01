@@ -37,6 +37,17 @@ body {
   color: var(--vscode-input-placeholderForeground);
 }
 
+.repo-header {
+  padding: 2px 8px;
+  font-size: 0.9em;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 .list-container {
   flex: 1;
   overflow-y: auto;

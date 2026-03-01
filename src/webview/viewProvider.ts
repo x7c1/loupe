@@ -109,6 +109,11 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     this.view?.webview.postMessage({ type: "focusInput" });
   }
 
+  private shortRepoName(): string {
+    const parts = this.repoName.split("/");
+    return parts.length > 2 ? parts.slice(-2).join("/") : this.repoName;
+  }
+
   private renderHtml(): void {
     if (!this.view) {
       return;
@@ -140,7 +145,7 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
 <body>
   <div class="search-container">
     <input type="text" class="search-input" id="searchInput" autofocus />
-  </div>
+  </div>${this.repoName ? `\n  <div class="repo-header">${this.shortRepoName()}</div>` : ""}
   <div class="list-container" id="listContainer"></div>
   <script nonce="${nonce}">
     window.__LOUPE__ = {
