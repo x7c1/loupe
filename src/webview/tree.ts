@@ -29,26 +29,45 @@ export function buildTree(files: string[]): TreeNode {
  * Flatten a tree into a list of items for rendering.
  * Directories are sorted before files, both alphabetically.
  */
+function countFiles(node: TreeNode): number {
+  let count = 0;
+  for (const child of node.children.values()) {
+    if (child.isDir) count += countFiles(child);
+    else count++;
+  }
+  return count;
+}
+
+function hasSingleDirChild(node: TreeNode): boolean {
+  const children = Array.from(node.children.values());
+  return children.length === 1 && children[0].isDir;
+}
+
 export function flattenTree(
   node: TreeNode,
   depth: number,
   result: FlatItem[],
   autoExpand: boolean,
   expandedDirs: Set<string>,
+  manuallyCollapsed: Set<string> = new Set(),
 ): FlatItem[] {
   const sorted = Array.from(node.children.values()).sort((a, b) => {
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
+  const parentIsSingleDir = hasSingleDirChild(node);
   for (const child of sorted) {
-    const isExp = autoExpand || expandedDirs.has(child.path);
+    const isExp = (child.isDir && parentIsSingleDir) || (autoExpand
+      ? !manuallyCollapsed.has(child.path)
+      : expandedDirs.has(child.path));
     result.push({
       path: child.path, name: child.name, isDir: child.isDir,
       depth, isExpanded: isExp,
+      fileCount: child.isDir ? countFiles(child) : undefined,
     });
-    if (child.isDir && (isExp || autoExpand)) {
+    if (child.isDir && isExp) {
       if (!autoExpand) expandedDirs.add(child.path);
-      flattenTree(child, depth + 1, result, autoExpand, expandedDirs);
+      flattenTree(child, depth + 1, result, autoExpand, expandedDirs, manuallyCollapsed);
     }
   }
   return result;
