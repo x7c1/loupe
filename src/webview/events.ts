@@ -19,6 +19,7 @@ function setupSearch(ctx: EventContext): void {
     debounceTimer = setTimeout(() => {
       const query = ctx.searchInput.value.trim();
       ctx.focusedIndex = -1;
+      ctx.manuallyCollapsed.clear();
       render(ctx);
       if (query.length > 0 && ctx.mode === "files") {
         ctx.focusedIndex = firstFileIndex(ctx.visibleItems);
@@ -140,19 +141,30 @@ function handleTreeToggle(e: KeyboardEvent, ctx: EventContext): boolean {
   const item = ctx.visibleItems[ctx.focusedIndex];
   if (!item || !item.isDir) return false;
 
-  if (e.key === "ArrowRight" && !ctx.expandedDirs.has(item.path)) {
+  if (e.key === "ArrowRight" && !item.isExpanded) {
     e.preventDefault();
-    ctx.expandedDirs.add(item.path);
+    toggleDir(ctx, item.path, true);
     render(ctx);
     return true;
   }
-  if (e.key === "ArrowLeft" && ctx.expandedDirs.has(item.path)) {
+  if (e.key === "ArrowLeft" && item.isExpanded) {
     e.preventDefault();
-    ctx.expandedDirs.delete(item.path);
+    toggleDir(ctx, item.path, false);
     render(ctx);
     return true;
   }
   return false;
+}
+
+function toggleDir(ctx: EventContext, path: string, expand: boolean): void {
+  const isFiltering = ctx.searchInput.value.trim().length > 0;
+  if (isFiltering) {
+    if (expand) ctx.manuallyCollapsed.delete(path);
+    else ctx.manuallyCollapsed.add(path);
+  } else {
+    if (expand) ctx.expandedDirs.add(path);
+    else ctx.expandedDirs.delete(path);
+  }
 }
 
 // --- Utilities ---
@@ -169,8 +181,7 @@ function acceptFocused(ctx: EventContext): void {
   if (ctx.mode === "repos") {
     ctx.vscode.postMessage({ type: "selectRepo", path: item.path, label: item.label });
   } else if (item.isDir) {
-    if (ctx.expandedDirs.has(item.path)) ctx.expandedDirs.delete(item.path);
-    else ctx.expandedDirs.add(item.path);
+    toggleDir(ctx, item.path, !item.isExpanded);
     render(ctx);
   } else {
     ctx.vscode.postMessage({ type: "openFile", path: item.path });

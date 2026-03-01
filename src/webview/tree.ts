@@ -35,20 +35,23 @@ export function flattenTree(
   result: FlatItem[],
   autoExpand: boolean,
   expandedDirs: Set<string>,
+  manuallyCollapsed: Set<string> = new Set(),
 ): FlatItem[] {
   const sorted = Array.from(node.children.values()).sort((a, b) => {
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
   for (const child of sorted) {
-    const isExp = autoExpand || expandedDirs.has(child.path);
+    const isExp = autoExpand
+      ? !manuallyCollapsed.has(child.path)
+      : expandedDirs.has(child.path);
     result.push({
       path: child.path, name: child.name, isDir: child.isDir,
       depth, isExpanded: isExp,
     });
-    if (child.isDir && (isExp || autoExpand)) {
+    if (child.isDir && isExp) {
       if (!autoExpand) expandedDirs.add(child.path);
-      flattenTree(child, depth + 1, result, autoExpand, expandedDirs);
+      flattenTree(child, depth + 1, result, autoExpand, expandedDirs, manuallyCollapsed);
     }
   }
   return result;

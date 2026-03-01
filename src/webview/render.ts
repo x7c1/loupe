@@ -11,6 +11,7 @@ export interface RenderContext {
   focusedIndex: number;
   visibleItems: FlatItem[];
   expandedDirs: Set<string>;
+  manuallyCollapsed: Set<string>;
 }
 
 export function render(ctx: RenderContext): void {
@@ -52,7 +53,7 @@ function renderFiles(ctx: RenderContext): void {
   const filtered = filterFiles(ctx.allFiles, query);
   const tree = buildTree(filtered);
   const autoExpand = isFiltered && filtered.length <= 100;
-  ctx.visibleItems = flattenTree(tree, 0, [], autoExpand, ctx.expandedDirs);
+  ctx.visibleItems = flattenTree(tree, 0, [], autoExpand, ctx.expandedDirs, ctx.manuallyCollapsed);
 
   if (ctx.visibleItems.length === 0) {
     ctx.listContainer.innerHTML = '<div class="no-items">' +

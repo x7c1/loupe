@@ -25,6 +25,7 @@ const ctx = {
   focusedIndex: -1,
   visibleItems: [] as never[],
   expandedDirs: new Set<string>(),
+  manuallyCollapsed: new Set<string>(),
 };
 
 ctx.searchInput.placeholder = init.mode === "repos"
