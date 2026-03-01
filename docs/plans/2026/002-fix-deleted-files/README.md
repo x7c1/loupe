@@ -1,6 +1,6 @@
 # Fix Deleted Files Still Appearing in File List
 
-Status: Open
+Status: Completed
 
 ## Overview
 
