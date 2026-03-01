@@ -1,40 +1,26 @@
 import { FlatItem } from "./types";
 
 /**
- * Find the index of the first file (non-directory) item.
+ * Find the index of the first item.
  */
 export function firstFileIndex(items: FlatItem[]): number {
-  for (let i = 0; i < items.length; i++) {
-    if (!items[i].isDir) return i;
-  }
-  return -1;
+  return items.length > 0 ? 0 : -1;
 }
 
 /**
- * Find the index of the next file item after the current position.
- * Wraps to the first file when reaching the end.
+ * Find the index of the next item after the current position.
+ * Wraps to the first item when reaching the end.
  */
 export function nextFileIndex(items: FlatItem[], current: number): number {
-  for (let i = current + 1; i < items.length; i++) {
-    if (!items[i].isDir) return i;
-  }
-  return firstFileIndex(items);
+  if (items.length === 0) return -1;
+  return current < items.length - 1 ? current + 1 : 0;
 }
 
 /**
- * Find the index of the previous file item before the current position.
- * Wraps to the last file when reaching the beginning.
+ * Find the index of the previous item before the current position.
+ * Wraps to the last item when reaching the beginning.
  */
 export function prevFileIndex(items: FlatItem[], current: number): number {
-  for (let i = current - 1; i >= 0; i--) {
-    if (!items[i].isDir) return i;
-  }
-  return lastFileIndex(items);
-}
-
-function lastFileIndex(items: FlatItem[]): number {
-  for (let i = items.length - 1; i >= 0; i--) {
-    if (!items[i].isDir) return i;
-  }
-  return -1;
+  if (items.length === 0) return -1;
+  return current > 0 ? current - 1 : items.length - 1;
 }

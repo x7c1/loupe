@@ -60,6 +60,7 @@ function setupKeyboard(ctx: EventContext): void {
       }
       return;
     }
+    if (handleTreeToggle(e, ctx)) return;
     handleArrowKeys(e, ctx);
   });
 
