@@ -80,6 +80,12 @@ export function activate(context: vscode.ExtensionContext) {
     const { files, subRepos } = await loadFilesAndSubRepos(repoPath, repoName);
     provider.setFiles(repoPath, repoName, files, { subRepos });
   });
+
+  // Handle navigating back to parent repo
+  provider.onGoBack(async (repoPath, repoName, focusPath) => {
+    const { files, subRepos } = await loadFilesAndSubRepos(repoPath, repoName);
+    provider.setFiles(repoPath, repoName, files, { activeFile: focusPath, subRepos });
+  });
 }
 
 async function scanAndSendRepos(

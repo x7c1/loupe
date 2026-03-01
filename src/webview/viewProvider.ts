@@ -17,9 +17,15 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
   private activeFile: string = "";
   private repoPath: string = "";
   private repoName: string = "";
+  private navStack: { repoPath: string; repoName: string; subRepoPath: string }[] = [];
   private repoSelectedCallback?: (
     repoPath: string,
     repoName: string
+  ) => void;
+  private goBackCallback?: (
+    repoPath: string,
+    repoName: string,
+    focusPath: string
   ) => void;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
@@ -48,10 +54,20 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === "selectRepo") {
         this.repoSelectedCallback?.(message.path, message.label);
       } else if (message.type === "selectSubRepo" && this.repoPath) {
+        this.navStack.push({
+          repoPath: this.repoPath,
+          repoName: this.repoName,
+          subRepoPath: message.path,
+        });
         const absPath = this.repoPath + "/" + message.path;
         this.repoSelectedCallback?.(absPath, message.path);
       } else if (message.type === "goBack") {
-        this.showRepoList();
+        if (this.navStack.length > 0) {
+          const parent = this.navStack.pop()!;
+          this.goBackCallback?.(parent.repoPath, parent.repoName, parent.subRepoPath);
+        } else {
+          this.showRepoList();
+        }
       }
     });
 
@@ -62,6 +78,12 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     callback: (repoPath: string, repoName: string) => void
   ): void {
     this.repoSelectedCallback = callback;
+  }
+
+  public onGoBack(
+    callback: (repoPath: string, repoName: string, focusPath: string) => void
+  ): void {
+    this.goBackCallback = callback;
   }
 
   public hasRepos(): boolean {
