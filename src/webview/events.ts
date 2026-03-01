@@ -171,7 +171,7 @@ function toggleDir(ctx: EventContext, path: string, expand: boolean): void {
 
 function scrollToFocused(ctx: EventContext): void {
   const el = ctx.listContainer.querySelector(".focused");
-  if (el) el.scrollIntoView({ block: "nearest" });
+  if (el) el.scrollIntoView({ block: "center" });
 }
 
 function acceptFocused(ctx: EventContext): void {
