@@ -38,8 +38,8 @@ export function activate(context: vscode.ExtensionContext) {
           const activeFile = activePath
             ? path.relative(matched.path, activePath)
             : undefined;
-          const files = await loadFiles(matched.path, matched.label);
-          provider.setFiles(matched.path, matched.label, files, activeFile);
+          const { files, subRepos } = await loadFilesAndSubRepos(matched.path, matched.label);
+          provider.setFiles(matched.path, matched.label, files, { activeFile, subRepos });
         }
       } else if (!provider.hasSelectedRepo()) {
         // No active file match and no repo selected - show repo list
@@ -66,8 +66,8 @@ export function activate(context: vscode.ExtensionContext) {
       if (provider.hasSelectedRepo()) {
         // Reload files for current repo
         const { repoPath, repoName } = provider.getSelectedRepo();
-        const files = await loadFiles(repoPath, repoName);
-        provider.setFiles(repoPath, repoName, files);
+        const { files, subRepos } = await loadFilesAndSubRepos(repoPath, repoName);
+        provider.setFiles(repoPath, repoName, files, { subRepos });
       } else {
         await scanAndSendRepos(provider);
       }
@@ -77,8 +77,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Handle repo selection from webview
   provider.onRepoSelected(async (repoPath: string, repoName: string) => {
-    const files = await loadFiles(repoPath, repoName);
-    provider.setFiles(repoPath, repoName, files);
+    const { files, subRepos } = await loadFilesAndSubRepos(repoPath, repoName);
+    provider.setFiles(repoPath, repoName, files, { subRepos });
   });
 }
 
@@ -154,17 +154,29 @@ function findRepoForActiveEditor(
   return best;
 }
 
-async function loadFiles(
+async function loadFilesAndSubRepos(
   repoPath: string,
   repoName: string
-): Promise<string[]> {
+): Promise<{ files: string[]; subRepos: string[] }> {
   return vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: `Loupe: Loading ${repoName}...`,
       cancellable: false,
     },
-    () => listGitFiles(repoPath)
+    async () => {
+      const config = vscode.workspace.getConfiguration("loupe");
+      const maxDepth = config.get<number>("maxDepth", 5);
+      const [files, childRepos] = await Promise.all([
+        listGitFiles(repoPath),
+        findGitRepos(repoPath, maxDepth),
+      ]);
+      // Exclude the repo itself, keep only nested sub-repos
+      const subRepos = childRepos
+        .filter((r) => r !== repoPath)
+        .map((r) => path.relative(repoPath, r));
+      return { files, subRepos };
+    }
   );
 }
 

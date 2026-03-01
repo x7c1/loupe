@@ -20,4 +20,5 @@ export interface FlatItem {
   fileCount?: number;
   label?: string;
   description?: string;
+  isSubRepo?: boolean;
 }

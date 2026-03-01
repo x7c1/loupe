@@ -4,6 +4,7 @@ import type { RepoItem } from "./types";
 type WebviewMessage =
   | { type: "openFile"; path: string }
   | { type: "selectRepo"; path: string; label: string }
+  | { type: "selectSubRepo"; path: string }
   | { type: "goBack" };
 
 export class FileTreeViewProvider implements vscode.WebviewViewProvider {
@@ -12,6 +13,7 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private repos: RepoItem[] = [];
   private files: string[] = [];
+  private subRepos: string[] = [];
   private activeFile: string = "";
   private repoPath: string = "";
   private repoName: string = "";
@@ -45,6 +47,9 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
         });
       } else if (message.type === "selectRepo") {
         this.repoSelectedCallback?.(message.path, message.label);
+      } else if (message.type === "selectSubRepo" && this.repoPath) {
+        const absPath = this.repoPath + "/" + message.path;
+        this.repoSelectedCallback?.(absPath, message.path);
       } else if (message.type === "goBack") {
         this.showRepoList();
       }
@@ -92,12 +97,13 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     repoPath: string,
     repoName: string,
     files: string[],
-    activeFile?: string
+    opts?: { activeFile?: string; subRepos?: string[] }
   ): void {
     this.repoPath = repoPath;
     this.repoName = repoName;
     this.files = files;
-    this.activeFile = activeFile ?? "";
+    this.subRepos = opts?.subRepos ?? [];
+    this.activeFile = opts?.activeFile ?? "";
     this.renderHtml();
   }
 
@@ -155,6 +161,7 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
       mode: ${JSON.stringify(mode)},
       repos: ${JSON.stringify(this.repos)},
       files: ${JSON.stringify(this.files)},
+      subRepos: ${JSON.stringify(this.subRepos)},
       repoName: ${JSON.stringify(this.repoName)},
       activeFile: ${JSON.stringify(this.activeFile)}
     };

@@ -10,6 +10,7 @@ interface LoupeInit {
   mode: "repos" | "files";
   repos: RepoItem[];
   files: string[];
+  subRepos: string[];
   repoName: string;
   activeFile: string;
 }
@@ -20,6 +21,7 @@ const ctx = {
   mode: init.mode,
   repos: init.repos,
   allFiles: init.files,
+  subRepos: init.subRepos,
   vscode: acquireVsCodeApi(),
   searchInput: document.getElementById("searchInput") as HTMLInputElement,
   listContainer: document.getElementById("listContainer") as HTMLDivElement,
