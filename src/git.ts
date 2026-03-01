@@ -51,7 +51,7 @@ export async function findGitRepos(
 export async function listGitFiles(repoDir: string): Promise<string[]> {
   const execOpts = { cwd: repoDir, maxBuffer: 10 * 1024 * 1024 };
 
-  const [tracked, untracked] = await Promise.all([
+  const [tracked, untracked, deleted] = await Promise.all([
     execFileAsync("git", ["ls-files"], execOpts).then(
       ({ stdout }) => stdout,
       () => ""
@@ -64,12 +64,24 @@ export async function listGitFiles(repoDir: string): Promise<string[]> {
       ({ stdout }) => stdout,
       () => ""
     ),
+    execFileAsync("git", ["ls-files", "--deleted"], execOpts).then(
+      ({ stdout }) => stdout,
+      () => ""
+    ),
   ]);
+
+  const deletedSet = new Set<string>();
+  for (const line of deleted.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.length > 0) {
+      deletedSet.add(trimmed);
+    }
+  }
 
   const files = new Set<string>();
   for (const line of tracked.split("\n")) {
     const trimmed = line.trim();
-    if (trimmed.length > 0) {
+    if (trimmed.length > 0 && !deletedSet.has(trimmed)) {
       files.add(trimmed);
     }
   }
