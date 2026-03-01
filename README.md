@@ -22,7 +22,7 @@ Loupe provides file search for these sub-repositories by scanning for `.git` dir
 
 ## Demo
 
-<video src="https://github.com/user-attachments/assets/7e305e5a-5b5d-42ab-af37-02fa815d2038" controls></video>
+<video src="https://github.com/user-attachments/assets/9244ba1c-f72e-445f-bc18-b6988ad12da4" controls></video>
 
 ## Usage
 
