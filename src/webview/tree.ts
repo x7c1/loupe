@@ -67,6 +67,25 @@ function hasSingleDirChild(node: TreeNode): boolean {
   return children.length === 1 && children[0].isDir;
 }
 
+/**
+ * Walk down a chain of single-child directories, merging names.
+ * Stops at sub-repos so they remain separate entries.
+ */
+function compactChain(
+  node: TreeNode,
+  subRepoPaths: Set<string>
+): { endNode: TreeNode; displayName: string } {
+  let current = node;
+  let displayName = node.name;
+  while (hasSingleDirChild(current)) {
+    const child = Array.from(current.children.values())[0];
+    if (subRepoPaths.has(child.path)) break;
+    displayName += "/" + child.name;
+    current = child;
+  }
+  return { endNode: current, displayName };
+}
+
 export function flattenTree(
   node: TreeNode,
   depth: number,
@@ -91,17 +110,25 @@ export function flattenTree(
       });
       continue;
     }
-    const isExp = (child.isDir && parentIsSingleDir) || (autoExpand
-      ? !manuallyCollapsed.has(child.path)
-      : expandedDirs.has(child.path));
-    result.push({
-      path: child.path, name: child.name, isDir: child.isDir,
-      depth, isExpanded: isExp,
-      fileCount: child.isDir ? countFiles(child, subRepoPaths) : undefined,
-    });
-    if (child.isDir && isExp) {
-      if (!autoExpand) expandedDirs.add(child.path);
-      flattenTree(child, depth + 1, result, autoExpand, expandedDirs, manuallyCollapsed, subRepoPaths);
+    if (child.isDir) {
+      const { endNode, displayName } = compactChain(child, subRepoPaths);
+      const isExp = parentIsSingleDir || (autoExpand
+        ? !manuallyCollapsed.has(endNode.path)
+        : expandedDirs.has(endNode.path));
+      result.push({
+        path: endNode.path, name: displayName, isDir: true,
+        depth, isExpanded: isExp,
+        fileCount: countFiles(endNode, subRepoPaths),
+      });
+      if (isExp) {
+        if (!autoExpand) expandedDirs.add(endNode.path);
+        flattenTree(endNode, depth + 1, result, autoExpand, expandedDirs, manuallyCollapsed, subRepoPaths);
+      }
+    } else {
+      result.push({
+        path: child.path, name: child.name, isDir: false,
+        depth, isExpanded: false,
+      });
     }
   }
   return result;
