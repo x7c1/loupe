@@ -26,13 +26,37 @@ export function buildTree(files: string[]): TreeNode {
 }
 
 /**
+ * Insert sub-repo entries into the tree.
+ * Creates intermediate directories as needed.
+ */
+export function insertSubRepos(root: TreeNode, subRepoPaths: string[]): void {
+  for (const repoPath of subRepoPaths) {
+    const parts = repoPath.split("/");
+    let cur = root;
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      if (!cur.children.has(p)) {
+        cur.children.set(p, {
+          children: new Map(),
+          isDir: true,
+          name: p,
+          path: parts.slice(0, i + 1).join("/"),
+        });
+      }
+      cur = cur.children.get(p)!;
+    }
+  }
+}
+
+/**
  * Flatten a tree into a list of items for rendering.
  * Directories are sorted before files, both alphabetically.
  */
-function countFiles(node: TreeNode): number {
+function countFiles(node: TreeNode, subRepoPaths: Set<string>): number {
   let count = 0;
   for (const child of node.children.values()) {
-    if (child.isDir) count += countFiles(child);
+    if (subRepoPaths.has(child.path)) count++;
+    else if (child.isDir) count += countFiles(child, subRepoPaths);
     else count++;
   }
   return count;
@@ -43,6 +67,25 @@ function hasSingleDirChild(node: TreeNode): boolean {
   return children.length === 1 && children[0].isDir;
 }
 
+/**
+ * Walk down a chain of single-child directories, merging names.
+ * Stops at sub-repos so they remain separate entries.
+ */
+function compactChain(
+  node: TreeNode,
+  subRepoPaths: Set<string>
+): { endNode: TreeNode; displayName: string } {
+  let current = node;
+  let displayName = node.name;
+  while (hasSingleDirChild(current)) {
+    const child = Array.from(current.children.values())[0];
+    if (subRepoPaths.has(child.path)) break;
+    displayName += "/" + child.name;
+    current = child;
+  }
+  return { endNode: current, displayName };
+}
+
 export function flattenTree(
   node: TreeNode,
   depth: number,
@@ -50,6 +93,7 @@ export function flattenTree(
   autoExpand: boolean,
   expandedDirs: Set<string>,
   manuallyCollapsed: Set<string> = new Set(),
+  subRepoPaths: Set<string> = new Set(),
 ): FlatItem[] {
   const sorted = Array.from(node.children.values()).sort((a, b) => {
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
@@ -57,17 +101,34 @@ export function flattenTree(
   });
   const parentIsSingleDir = hasSingleDirChild(node);
   for (const child of sorted) {
-    const isExp = (child.isDir && parentIsSingleDir) || (autoExpand
-      ? !manuallyCollapsed.has(child.path)
-      : expandedDirs.has(child.path));
-    result.push({
-      path: child.path, name: child.name, isDir: child.isDir,
-      depth, isExpanded: isExp,
-      fileCount: child.isDir ? countFiles(child) : undefined,
-    });
-    if (child.isDir && isExp) {
-      if (!autoExpand) expandedDirs.add(child.path);
-      flattenTree(child, depth + 1, result, autoExpand, expandedDirs, manuallyCollapsed);
+    const isSubRepo = subRepoPaths.has(child.path);
+    if (isSubRepo) {
+      // Sub-repos are rendered as leaf items (not expandable)
+      result.push({
+        path: child.path, name: child.name, isDir: false,
+        depth, isExpanded: false, isSubRepo: true,
+      });
+      continue;
+    }
+    if (child.isDir) {
+      const { endNode, displayName } = compactChain(child, subRepoPaths);
+      const isExp = parentIsSingleDir || (autoExpand
+        ? !manuallyCollapsed.has(endNode.path)
+        : expandedDirs.has(endNode.path));
+      result.push({
+        path: endNode.path, name: displayName, isDir: true,
+        depth, isExpanded: isExp,
+        fileCount: countFiles(endNode, subRepoPaths),
+      });
+      if (isExp) {
+        if (!autoExpand) expandedDirs.add(endNode.path);
+        flattenTree(endNode, depth + 1, result, autoExpand, expandedDirs, manuallyCollapsed, subRepoPaths);
+      }
+    } else {
+      result.push({
+        path: child.path, name: child.name, isDir: false,
+        depth, isExpanded: false,
+      });
     }
   }
   return result;

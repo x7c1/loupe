@@ -5,7 +5,8 @@ import { promisify } from "util";
 const execFileAsync = promisify(execFile);
 
 /**
- * Find directories that contain a .git folder using the `find` command.
+ * Find directories that contain a .git entry (directory or file).
+ * Regular repos have a .git directory; submodules have a .git file.
  */
 export async function findGitRepos(
   rootDir: string,
@@ -20,8 +21,13 @@ export async function findGitRepos(
         String(maxDepth + 1),
         "-name",
         ".git",
+        "(",
         "-type",
         "d",
+        "-o",
+        "-type",
+        "f",
+        ")",
         "-not",
         "-path",
         "*/node_modules/*",

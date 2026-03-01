@@ -4,6 +4,7 @@ import type { RepoItem } from "./types";
 type WebviewMessage =
   | { type: "openFile"; path: string }
   | { type: "selectRepo"; path: string; label: string }
+  | { type: "selectSubRepo"; path: string }
   | { type: "goBack" };
 
 export class FileTreeViewProvider implements vscode.WebviewViewProvider {
@@ -12,11 +13,19 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private repos: RepoItem[] = [];
   private files: string[] = [];
+  private subRepos: string[] = [];
+  private activeFile: string = "";
   private repoPath: string = "";
   private repoName: string = "";
+  private navStack: { repoPath: string; repoName: string; subRepoPath: string }[] = [];
   private repoSelectedCallback?: (
     repoPath: string,
     repoName: string
+  ) => void;
+  private goBackCallback?: (
+    repoPath: string,
+    repoName: string,
+    focusPath: string
   ) => void;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
@@ -44,8 +53,21 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
         });
       } else if (message.type === "selectRepo") {
         this.repoSelectedCallback?.(message.path, message.label);
+      } else if (message.type === "selectSubRepo" && this.repoPath) {
+        this.navStack.push({
+          repoPath: this.repoPath,
+          repoName: this.repoName,
+          subRepoPath: message.path,
+        });
+        const absPath = this.repoPath + "/" + message.path;
+        this.repoSelectedCallback?.(absPath, message.path);
       } else if (message.type === "goBack") {
-        this.showRepoList();
+        if (this.navStack.length > 0) {
+          const parent = this.navStack.pop()!;
+          this.goBackCallback?.(parent.repoPath, parent.repoName, parent.subRepoPath);
+        } else {
+          this.showRepoList();
+        }
       }
     });
 
@@ -56,6 +78,12 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     callback: (repoPath: string, repoName: string) => void
   ): void {
     this.repoSelectedCallback = callback;
+  }
+
+  public onGoBack(
+    callback: (repoPath: string, repoName: string, focusPath: string) => void
+  ): void {
+    this.goBackCallback = callback;
   }
 
   public hasRepos(): boolean {
@@ -70,6 +98,15 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     return { repoPath: this.repoPath, repoName: this.repoName };
   }
 
+  public getRepos(): RepoItem[] {
+    return this.repos;
+  }
+
+  // Store repos without rendering (used when auto-selecting a repo)
+  public storeRepos(repos: RepoItem[]): void {
+    this.repos = repos;
+  }
+
   public setRepos(repos: RepoItem[]): void {
     this.repos = repos;
     this.repoPath = "";
@@ -81,11 +118,14 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
   public setFiles(
     repoPath: string,
     repoName: string,
-    files: string[]
+    files: string[],
+    opts?: { activeFile?: string; subRepos?: string[] }
   ): void {
     this.repoPath = repoPath;
     this.repoName = repoName;
     this.files = files;
+    this.subRepos = opts?.subRepos ?? [];
+    this.activeFile = opts?.activeFile ?? "";
     this.renderHtml();
   }
 
@@ -98,6 +138,11 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
 
   public focusInput(): void {
     this.view?.webview.postMessage({ type: "focusInput" });
+  }
+
+  private shortRepoName(): string {
+    const parts = this.repoName.split("/");
+    return parts.length > 2 ? parts.slice(-2).join("/") : this.repoName;
   }
 
   private renderHtml(): void {
@@ -131,14 +176,16 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
 <body>
   <div class="search-container">
     <input type="text" class="search-input" id="searchInput" autofocus />
-  </div>
+  </div>${this.repoName ? `\n  <div class="repo-header">${this.shortRepoName()}</div>` : ""}
   <div class="list-container" id="listContainer"></div>
   <script nonce="${nonce}">
     window.__LOUPE__ = {
       mode: ${JSON.stringify(mode)},
       repos: ${JSON.stringify(this.repos)},
       files: ${JSON.stringify(this.files)},
-      repoName: ${JSON.stringify(this.repoName)}
+      subRepos: ${JSON.stringify(this.subRepos)},
+      repoName: ${JSON.stringify(this.repoName)},
+      activeFile: ${JSON.stringify(this.activeFile)}
     };
   </script>
   <script nonce="${nonce}" src="${scriptUri}"></script>

@@ -1,12 +1,13 @@
 import { FlatItem, RepoItem } from "./types";
-import { filterRepos, filterFiles } from "./filter";
+import { filterRepos, filterFiles, filterSubRepos } from "./filter";
 import { TreeNode } from "./types";
-import { buildTree, flattenTree } from "./tree";
+import { buildTree, insertSubRepos, flattenTree } from "./tree";
 
 export interface RenderContext {
   readonly mode: "repos" | "files";
   readonly repos: RepoItem[];
   readonly allFiles: string[];
+  readonly subRepos: string[];
   readonly searchInput: HTMLInputElement;
   readonly listContainer: HTMLDivElement;
   focusedIndex: number;
@@ -53,9 +54,14 @@ function renderFiles(ctx: RenderContext): void {
   const isFiltered = query.length > 0;
   const filtered = filterFiles(ctx.allFiles, query);
   const tree = buildTree(filtered);
+  const matchedSubRepos = isFiltered
+    ? filterSubRepos(ctx.subRepos, query)
+    : ctx.subRepos;
+  const subRepoPaths = new Set(matchedSubRepos);
+  insertSubRepos(tree, matchedSubRepos);
   const singleDir = isSingleDirRoot(tree);
   const autoExpand = isFiltered && (filtered.length <= 100 || singleDir);
-  const allItems = flattenTree(tree, 0, [], autoExpand, ctx.expandedDirs, ctx.manuallyCollapsed);
+  const allItems = flattenTree(tree, 0, [], autoExpand, ctx.expandedDirs, ctx.manuallyCollapsed, subRepoPaths);
   const maxVisible = 100;
   const truncated = singleDir && allItems.length > maxVisible;
   ctx.visibleItems = truncated ? allItems.slice(0, maxVisible) : allItems;
@@ -71,7 +77,7 @@ function renderFiles(ctx: RenderContext): void {
     const tc = item.isDir
       ? (item.isExpanded ? "toggle expanded" : "toggle collapsed")
       : "toggle leaf";
-    const icon = item.isDir ? "\u{1F4C1}" : "\u{1F4C4}";
+    const icon = item.isSubRepo ? "\u{1F4E6}" : item.isDir ? "\u{1F4C1}" : "\u{1F4C4}";
     const fc = i === ctx.focusedIndex ? " focused" : "";
     const badge = item.isDir && item.fileCount
       ? '<span class="badge">' + item.fileCount + '</span>' : "";

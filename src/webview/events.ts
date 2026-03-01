@@ -60,6 +60,7 @@ function setupKeyboard(ctx: EventContext): void {
       }
       return;
     }
+    if (handleTreeToggle(e, ctx)) return;
     handleArrowKeys(e, ctx);
   });
 
@@ -181,6 +182,8 @@ function acceptFocused(ctx: EventContext): void {
 
   if (ctx.mode === "repos") {
     ctx.vscode.postMessage({ type: "selectRepo", path: item.path, label: item.label });
+  } else if (item.isSubRepo) {
+    ctx.vscode.postMessage({ type: "selectSubRepo", path: item.path });
   } else if (item.isDir) {
     toggleDir(ctx, item.path, !item.isExpanded);
     render(ctx);

@@ -10,19 +10,28 @@ Loupe provides file search for these sub-repositories by scanning for `.git` dir
 
 ## Features
 
-- Scans workspace for sub-repositories (directories containing `.git`)
+- Scans workspace for sub-repositories (directories containing `.git`, including submodules)
 - Displays files in a tree view with folder expand/collapse
+- Compact folder display — single-child directory chains are merged (e.g., `src/main/scala`)
 - Space-separated AND search for filtering by file name and path
 - Opens selected files in a new editor tab
 - Keyboard-driven workflow
+- Auto-selects repository based on the currently active editor file
+- Shows sub-repositories in the file tree with navigation support
+- Hierarchical back-navigation through nested sub-repositories
+
+## Demo
+
+<video src="https://github.com/user-attachments/assets/7e305e5a-5b5d-42ab-af37-02fa815d2038" controls></video>
 
 ## Usage
 
 1. Press `Ctrl+G Ctrl+G` (`Cmd+G Cmd+G` on macOS) to open Loupe
-2. Select a repository from the list
-3. Type to filter files (space-separated tokens for AND matching)
-4. Press `Enter` to open the selected file
-5. Press `Esc` to clear the search, or go back to the repository list
+2. If a file is open in the editor, its repository is auto-selected
+3. Otherwise, select a repository from the list
+4. Type to filter files (space-separated tokens for AND matching)
+5. Press `Enter` to open a file, or navigate into a sub-repository (📦)
+6. Press `Esc` to clear the search, go back to the parent repository, or return to the repository list
 
 ## Commands
 
