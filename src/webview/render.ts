@@ -68,11 +68,13 @@ function renderFiles(ctx: RenderContext): void {
       : "toggle leaf";
     const icon = item.isDir ? "\u{1F4C1}" : "\u{1F4C4}";
     const fc = i === ctx.focusedIndex ? " focused" : "";
+    const badge = item.isDir && item.fileCount
+      ? '<span class="badge">' + item.fileCount + '</span>' : "";
     return '<div class="tree-item ' + dc + fc + '" data-index="' + i + '" data-is-dir="' + item.isDir + '">'
       + '<span class="' + tc + '"></span>'
       + '<span class="icon">' + icon + '</span>'
       + '<span class="label">' + esc(item.name) + '</span>'
-      + '</div>';
+      + badge + '</div>';
   }).join("");
 }
 

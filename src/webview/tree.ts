@@ -29,6 +29,15 @@ export function buildTree(files: string[]): TreeNode {
  * Flatten a tree into a list of items for rendering.
  * Directories are sorted before files, both alphabetically.
  */
+function countFiles(node: TreeNode): number {
+  let count = 0;
+  for (const child of node.children.values()) {
+    if (child.isDir) count += countFiles(child);
+    else count++;
+  }
+  return count;
+}
+
 export function flattenTree(
   node: TreeNode,
   depth: number,
@@ -48,6 +57,7 @@ export function flattenTree(
     result.push({
       path: child.path, name: child.name, isDir: child.isDir,
       depth, isExpanded: isExp,
+      fileCount: child.isDir ? countFiles(child) : undefined,
     });
     if (child.isDir && isExp) {
       if (!autoExpand) expandedDirs.add(child.path);

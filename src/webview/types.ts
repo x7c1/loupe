@@ -17,6 +17,7 @@ export interface FlatItem {
   isDir: boolean;
   depth: number;
   isExpanded: boolean;
+  fileCount?: number;
   label?: string;
   description?: string;
 }

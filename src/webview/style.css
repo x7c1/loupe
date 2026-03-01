@@ -136,6 +136,13 @@ body {
   text-overflow: ellipsis;
 }
 
+.tree-item .badge {
+  margin-left: 6px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.85em;
+  flex-shrink: 0;
+}
+
 .no-items {
   padding: 16px;
   text-align: center;

@@ -157,13 +157,12 @@ function handleTreeToggle(e: KeyboardEvent, ctx: EventContext): boolean {
 }
 
 function toggleDir(ctx: EventContext, path: string, expand: boolean): void {
-  const isFiltering = ctx.searchInput.value.trim().length > 0;
-  if (isFiltering) {
-    if (expand) ctx.manuallyCollapsed.delete(path);
-    else ctx.manuallyCollapsed.add(path);
+  if (expand) {
+    ctx.expandedDirs.add(path);
+    ctx.manuallyCollapsed.delete(path);
   } else {
-    if (expand) ctx.expandedDirs.add(path);
-    else ctx.expandedDirs.delete(path);
+    ctx.expandedDirs.delete(path);
+    ctx.manuallyCollapsed.add(path);
   }
 }
 
