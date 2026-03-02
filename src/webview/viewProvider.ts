@@ -1,31 +1,41 @@
 import * as vscode from "vscode";
-import type { RepoItem } from "./types";
+import type { RepoItem, WebviewState } from "./types";
+
+interface TabState {
+  repoPath: string;
+  repoName: string;
+  files: string[];
+  subRepos: string[];
+  expandedDirs: string[];
+  manuallyCollapsed: string[];
+  searchQuery: string;
+  focusedIndex: number;
+  lastAccessed: number;
+}
 
 type WebviewMessage =
   | { type: "openFile"; path: string }
   | { type: "selectRepo"; path: string; label: string }
-  | { type: "selectSubRepo"; path: string }
-  | { type: "goBack" };
+  | { type: "selectSubRepo"; path: string; currentState: WebviewState }
+  | { type: "goBack"; currentState: WebviewState }
+  | { type: "switchTab"; repoPath: string; currentState: WebviewState }
+  | { type: "closeTab"; repoPath: string }
+  | { type: "reportState"; state: WebviewState }
+  | { type: "ready" };
 
 export class FileTreeViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "loupe.fileTreeView";
 
   private view?: vscode.WebviewView;
   private repos: RepoItem[] = [];
-  private files: string[] = [];
-  private subRepos: string[] = [];
-  private activeFile: string = "";
-  private repoPath: string = "";
-  private repoName: string = "";
-  private navStack: { repoPath: string; repoName: string; subRepoPath: string }[] = [];
+  private tabs: TabState[] = [];
+  private activeTabIndex: number = -1;
+  private get maxTabs(): number {
+    return vscode.workspace.getConfiguration("loupe").get<number>("maxTabs", 10);
+  }
   private repoSelectedCallback?: (
     repoPath: string,
     repoName: string
-  ) => void;
-  private goBackCallback?: (
-    repoPath: string,
-    repoName: string,
-    focusPath: string
   ) => void;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
@@ -42,10 +52,16 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this.extensionUri],
     };
 
+    webviewView.webview.html = this.getHtmlContent(webviewView.webview);
+
     webviewView.webview.onDidReceiveMessage((message: WebviewMessage) => {
-      if (message.type === "openFile" && this.repoPath) {
+      if (message.type === "ready") {
+        this.sendCurrentState();
+      } else if (message.type === "openFile") {
+        if (this.activeTabIndex < 0) return;
+        const tab = this.tabs[this.activeTabIndex];
         const absPath = vscode.Uri.joinPath(
-          vscode.Uri.file(this.repoPath),
+          vscode.Uri.file(tab.repoPath),
           message.path
         );
         vscode.workspace.openTextDocument(absPath).then((doc) => {
@@ -53,25 +69,24 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
         });
       } else if (message.type === "selectRepo") {
         this.repoSelectedCallback?.(message.path, message.label);
-      } else if (message.type === "selectSubRepo" && this.repoPath) {
-        this.navStack.push({
-          repoPath: this.repoPath,
-          repoName: this.repoName,
-          subRepoPath: message.path,
-        });
-        const absPath = this.repoPath + "/" + message.path;
+      } else if (message.type === "selectSubRepo") {
+        if (this.activeTabIndex < 0) return;
+        this.saveTabState(message.currentState);
+        const tab = this.tabs[this.activeTabIndex];
+        const absPath = tab.repoPath + "/" + message.path;
         this.repoSelectedCallback?.(absPath, message.path);
       } else if (message.type === "goBack") {
-        if (this.navStack.length > 0) {
-          const parent = this.navStack.pop()!;
-          this.goBackCallback?.(parent.repoPath, parent.repoName, parent.subRepoPath);
-        } else {
-          this.showRepoList();
-        }
+        this.saveTabState(message.currentState);
+        this.showRepoList();
+      } else if (message.type === "switchTab") {
+        this.saveTabState(message.currentState);
+        this.switchToTab(message.repoPath);
+      } else if (message.type === "closeTab") {
+        this.closeTab(message.repoPath);
+      } else if (message.type === "reportState") {
+        this.saveTabState(message.state);
       }
     });
-
-    this.renderHtml();
   }
 
   public onRepoSelected(
@@ -80,81 +95,223 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     this.repoSelectedCallback = callback;
   }
 
-  public onGoBack(
-    callback: (repoPath: string, repoName: string, focusPath: string) => void
-  ): void {
-    this.goBackCallback = callback;
-  }
-
   public hasRepos(): boolean {
     return this.repos.length > 0;
   }
 
   public hasSelectedRepo(): boolean {
-    return this.repoPath !== "";
+    return this.activeTabIndex >= 0;
   }
 
   public getSelectedRepo(): { repoPath: string; repoName: string } {
-    return { repoPath: this.repoPath, repoName: this.repoName };
+    const tab = this.tabs[this.activeTabIndex];
+    return { repoPath: tab.repoPath, repoName: tab.repoName };
   }
 
   public getRepos(): RepoItem[] {
     return this.repos;
   }
 
-  // Store repos without rendering (used when auto-selecting a repo)
+  // Store repos without notifying (used when auto-selecting a repo)
   public storeRepos(repos: RepoItem[]): void {
     this.repos = repos;
   }
 
   public setRepos(repos: RepoItem[]): void {
     this.repos = repos;
-    this.repoPath = "";
-    this.repoName = "";
-    this.files = [];
-    this.renderHtml();
+    this.activeTabIndex = -1;
+    this.view?.webview.postMessage({ type: "setRepos", repos });
+    this.sendTabsUpdate();
   }
 
+  // Opens a new tab or switches to an existing one
   public setFiles(
     repoPath: string,
     repoName: string,
     files: string[],
     opts?: { activeFile?: string; subRepos?: string[] }
   ): void {
-    this.repoPath = repoPath;
-    this.repoName = repoName;
-    this.files = files;
-    this.subRepos = opts?.subRepos ?? [];
-    this.activeFile = opts?.activeFile ?? "";
-    this.renderHtml();
+    const subRepos = opts?.subRepos ?? [];
+    const activeFile = opts?.activeFile ?? "";
+
+    const existingIndex = this.tabs.findIndex(t => t.repoPath === repoPath);
+    if (existingIndex >= 0) {
+      // Switch to existing tab
+      const tab = this.tabs[existingIndex];
+      tab.lastAccessed = Date.now();
+      tab.files = files;
+      tab.subRepos = subRepos;
+      this.activeTabIndex = existingIndex;
+      this.view?.webview.postMessage({
+        type: "setFiles",
+        files: tab.files,
+        subRepos: tab.subRepos,
+        repoName: tab.repoName,
+        activeFile: "",
+        savedState: {
+          expandedDirs: tab.expandedDirs,
+          manuallyCollapsed: tab.manuallyCollapsed,
+          searchQuery: tab.searchQuery,
+          focusedIndex: tab.focusedIndex,
+        },
+      });
+    } else {
+      // Create new tab
+      this.evictIfNeeded();
+      const tab: TabState = {
+        repoPath,
+        repoName,
+        files,
+        subRepos,
+        expandedDirs: [],
+        manuallyCollapsed: [],
+        searchQuery: "",
+        focusedIndex: -1,
+        lastAccessed: Date.now(),
+      };
+      this.tabs.push(tab);
+      this.activeTabIndex = this.tabs.length - 1;
+      this.view?.webview.postMessage({
+        type: "setFiles",
+        files,
+        subRepos,
+        repoName,
+        activeFile,
+      });
+    }
+    this.sendTabsUpdate();
   }
 
   public showRepoList(): void {
-    this.repoPath = "";
-    this.repoName = "";
-    this.files = [];
-    this.renderHtml();
+    this.activeTabIndex = -1;
+    this.view?.webview.postMessage({ type: "showRepoList" });
+    this.sendTabsUpdate();
   }
 
   public focusInput(): void {
     this.view?.webview.postMessage({ type: "focusInput" });
   }
 
-  private shortRepoName(): string {
-    const parts = this.repoName.split("/");
-    return parts.length > 2 ? parts.slice(-2).join("/") : this.repoName;
+  private switchToTab(repoPath: string): void {
+    const index = this.tabs.findIndex(t => t.repoPath === repoPath);
+    if (index < 0) return;
+    this.activeTabIndex = index;
+    const tab = this.tabs[index];
+    tab.lastAccessed = Date.now();
+    this.view?.webview.postMessage({
+      type: "setFiles",
+      files: tab.files,
+      subRepos: tab.subRepos,
+      repoName: tab.repoName,
+      activeFile: "",
+      savedState: {
+        expandedDirs: tab.expandedDirs,
+        manuallyCollapsed: tab.manuallyCollapsed,
+        searchQuery: tab.searchQuery,
+        focusedIndex: tab.focusedIndex,
+      },
+    });
+    this.sendTabsUpdate();
   }
 
-  private renderHtml(): void {
-    if (!this.view) {
-      return;
+  private closeTab(repoPath: string): void {
+    const index = this.tabs.findIndex(t => t.repoPath === repoPath);
+    if (index < 0) return;
+
+    this.tabs.splice(index, 1);
+
+    if (this.tabs.length === 0) {
+      this.activeTabIndex = -1;
+      this.view?.webview.postMessage({ type: "showRepoList" });
+    } else if (this.activeTabIndex === index) {
+      // Active tab was closed, switch to nearest
+      this.activeTabIndex = Math.min(index, this.tabs.length - 1);
+      const tab = this.tabs[this.activeTabIndex];
+      tab.lastAccessed = Date.now();
+      this.view?.webview.postMessage({
+        type: "setFiles",
+        files: tab.files,
+        subRepos: tab.subRepos,
+        repoName: tab.repoName,
+        activeFile: "",
+        savedState: {
+          expandedDirs: tab.expandedDirs,
+          manuallyCollapsed: tab.manuallyCollapsed,
+          searchQuery: tab.searchQuery,
+          focusedIndex: tab.focusedIndex,
+        },
+      });
+    } else if (this.activeTabIndex > index) {
+      this.activeTabIndex--;
     }
-    this.view.webview.html = this.getHtmlContent(this.view.webview);
+    this.sendTabsUpdate();
+  }
+
+  private saveTabState(state: WebviewState): void {
+    if (this.activeTabIndex < 0 || this.activeTabIndex >= this.tabs.length) return;
+    const tab = this.tabs[this.activeTabIndex];
+    tab.expandedDirs = state.expandedDirs;
+    tab.manuallyCollapsed = state.manuallyCollapsed;
+    tab.searchQuery = state.searchQuery;
+    tab.focusedIndex = state.focusedIndex;
+  }
+
+  private evictIfNeeded(): void {
+    while (this.tabs.length >= this.maxTabs) {
+      let lruIndex = -1;
+      let lruTime = Infinity;
+      for (let i = 0; i < this.tabs.length; i++) {
+        if (i !== this.activeTabIndex && this.tabs[i].lastAccessed < lruTime) {
+          lruTime = this.tabs[i].lastAccessed;
+          lruIndex = i;
+        }
+      }
+      if (lruIndex >= 0) {
+        this.tabs.splice(lruIndex, 1);
+        if (this.activeTabIndex > lruIndex) {
+          this.activeTabIndex--;
+        }
+      } else {
+        break;
+      }
+    }
+  }
+
+  private sendTabsUpdate(): void {
+    this.view?.webview.postMessage({
+      type: "updateTabs",
+      tabs: this.tabs.map(t => ({ repoPath: t.repoPath, repoName: t.repoName })),
+      activeIndex: this.activeTabIndex,
+    });
+  }
+
+  private sendCurrentState(): void {
+    this.sendTabsUpdate();
+    if (this.activeTabIndex >= 0) {
+      const tab = this.tabs[this.activeTabIndex];
+      this.view?.webview.postMessage({
+        type: "setFiles",
+        files: tab.files,
+        subRepos: tab.subRepos,
+        repoName: tab.repoName,
+        activeFile: "",
+        savedState: {
+          expandedDirs: tab.expandedDirs,
+          manuallyCollapsed: tab.manuallyCollapsed,
+          searchQuery: tab.searchQuery,
+          focusedIndex: tab.focusedIndex,
+        },
+      });
+    } else if (this.repos.length > 0) {
+      this.view?.webview.postMessage({
+        type: "setRepos",
+        repos: this.repos,
+      });
+    }
   }
 
   private getHtmlContent(webview: vscode.Webview): string {
     const nonce = getNonce();
-    const mode = this.repoPath ? "files" : "repos";
 
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, "out", "webview", "main.js")
@@ -176,18 +333,10 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
 <body>
   <div class="search-container">
     <input type="text" class="search-input" id="searchInput" autofocus />
-  </div>${this.repoName ? `\n  <div class="repo-header">${this.shortRepoName()}</div>` : ""}
+  </div>
+  <div class="tab-bar" id="tabBar"></div>
+  <div class="repo-header" id="repoHeader" style="display:none"></div>
   <div class="list-container" id="listContainer"></div>
-  <script nonce="${nonce}">
-    window.__LOUPE__ = {
-      mode: ${JSON.stringify(mode)},
-      repos: ${JSON.stringify(this.repos)},
-      files: ${JSON.stringify(this.files)},
-      subRepos: ${JSON.stringify(this.subRepos)},
-      repoName: ${JSON.stringify(this.repoName)},
-      activeFile: ${JSON.stringify(this.activeFile)}
-    };
-  </script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

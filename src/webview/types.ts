@@ -22,3 +22,15 @@ export interface FlatItem {
   description?: string;
   isSubRepo?: boolean;
 }
+
+export interface WebviewState {
+  expandedDirs: string[];
+  manuallyCollapsed: string[];
+  searchQuery: string;
+  focusedIndex: number;
+}
+
+export interface TabInfo {
+  repoPath: string;
+  repoName: string;
+}

@@ -75,16 +75,10 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Handle repo selection from webview
+  // Handle repo selection from webview (also handles sub-repo navigation)
   provider.onRepoSelected(async (repoPath: string, repoName: string) => {
     const { files, subRepos } = await loadFilesAndSubRepos(repoPath, repoName);
     provider.setFiles(repoPath, repoName, files, { subRepos });
-  });
-
-  // Handle navigating back to parent repo
-  provider.onGoBack(async (repoPath, repoName, focusPath) => {
-    const { files, subRepos } = await loadFilesAndSubRepos(repoPath, repoName);
-    provider.setFiles(repoPath, repoName, files, { activeFile: focusPath, subRepos });
   });
 }
 

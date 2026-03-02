@@ -25,6 +25,13 @@
           "minimum": 1,
           "maximum": 20,
           "description": "Maximum directory depth to scan for sub-repositories with .git"
+        },
+        "loupe.maxTabs": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Maximum number of open tabs. When exceeded, the least recently used tab is closed."
         }
       }
     },

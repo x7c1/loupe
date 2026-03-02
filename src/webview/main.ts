@@ -1,61 +1,197 @@
 import { render } from "./render";
 import { setupEventHandlers } from "./events";
-import { RepoItem } from "./types";
+import { RepoItem, FlatItem, TabInfo } from "./types";
 
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
 };
 
-interface LoupeInit {
-  mode: "repos" | "files";
-  repos: RepoItem[];
-  files: string[];
-  subRepos: string[];
-  repoName: string;
-  activeFile: string;
-}
+const vscodeApi = acquireVsCodeApi();
 
-const init = (window as unknown as { __LOUPE__: LoupeInit }).__LOUPE__;
+const tabBarEl = document.getElementById("tabBar") as HTMLDivElement;
 
 const ctx = {
-  mode: init.mode,
-  repos: init.repos,
-  allFiles: init.files,
-  subRepos: init.subRepos,
-  vscode: acquireVsCodeApi(),
+  mode: "repos" as "repos" | "files",
+  repos: [] as RepoItem[],
+  allFiles: [] as string[],
+  subRepos: [] as string[],
+  tabs: [] as TabInfo[],
+  activeTabIndex: -1,
+  tabBar: tabBarEl,
+  tabNavMode: false,
+  tabNavFilter: "",
+  tabNavFocusIndex: 0,
+  vscode: vscodeApi,
   searchInput: document.getElementById("searchInput") as HTMLInputElement,
   listContainer: document.getElementById("listContainer") as HTMLDivElement,
   focusedIndex: -1,
-  visibleItems: [] as never[],
+  visibleItems: [] as FlatItem[],
   expandedDirs: new Set<string>(),
   manuallyCollapsed: new Set<string>(),
 };
 
-ctx.searchInput.placeholder = init.mode === "repos"
-  ? `Search repositories (${init.repos.length})`
-  : `Search files in ${init.repoName} (${init.files.length} files)`;
+const repoHeader = document.getElementById("repoHeader") as HTMLDivElement;
 
-// Pre-expand directories to reveal the active file
-if (init.activeFile && init.mode === "files") {
-  const parts = init.activeFile.split("/");
-  for (let i = 1; i < parts.length; i++) {
-    ctx.expandedDirs.add(parts.slice(0, i).join("/"));
-  }
+function shortRepoName(name: string): string {
+  const parts = name.split("/");
+  return parts.length > 2 ? parts.slice(-2).join("/") : name;
 }
+
+function esc(t: string): string {
+  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function collectCurrentState(): object {
+  return {
+    expandedDirs: Array.from(ctx.expandedDirs),
+    manuallyCollapsed: Array.from(ctx.manuallyCollapsed),
+    searchQuery: ctx.searchInput.value,
+    focusedIndex: ctx.focusedIndex,
+  };
+}
+
+function resetTabNavMode(): void {
+  ctx.tabNavMode = false;
+  ctx.tabNavFilter = "";
+  ctx.tabNavFocusIndex = 0;
+}
+
+function renderTabBar(): void {
+  if (ctx.tabs.length === 0) {
+    tabBarEl.innerHTML = "";
+    return;
+  }
+  tabBarEl.innerHTML = ctx.tabs.map((tab, i) => {
+    const active = i === ctx.activeTabIndex ? " active" : "";
+    return '<div class="tab-item' + active + '" data-repo-path="' + esc(tab.repoPath) + '">'
+      + '<span class="tab-label">' + esc(shortRepoName(tab.repoName)) + '</span>'
+      + '<span class="tab-close" data-tab-close="true">&times;</span>'
+      + '</div>';
+  }).join("");
+}
+
+// Tab bar click handling
+tabBarEl.addEventListener("click", (e: MouseEvent) => {
+  const closeBtn = (e.target as HTMLElement).closest("[data-tab-close]");
+  const tabEl = (e.target as HTMLElement).closest("[data-repo-path]") as HTMLElement | null;
+  if (!tabEl) return;
+  const repoPath = tabEl.dataset.repoPath!;
+
+  // Exit tab nav mode if active
+  resetTabNavMode();
+
+  if (closeBtn) {
+    vscodeApi.postMessage({ type: "closeTab", repoPath });
+  } else {
+    vscodeApi.postMessage({
+      type: "switchTab",
+      repoPath,
+      currentState: collectCurrentState(),
+    });
+  }
+});
 
 setupEventHandlers(ctx);
-render(ctx);
 
-// Focus the active file in the tree
-if (init.activeFile && init.mode === "files") {
-  ctx.focusedIndex = ctx.visibleItems.findIndex(
-    (item) => !item.isDir && item.path === init.activeFile
-  );
-  if (ctx.focusedIndex >= 0) {
-    render(ctx);
-    const el = ctx.listContainer.querySelector(".focused");
-    if (el) el.scrollIntoView({ block: "center" });
+// Handle state updates from extension
+window.addEventListener("message", (event: MessageEvent) => {
+  const msg = event.data;
+  switch (msg.type) {
+    case "setRepos":
+      resetTabNavMode();
+      ctx.mode = "repos";
+      ctx.repos = msg.repos;
+      ctx.allFiles = [];
+      ctx.subRepos = [];
+      ctx.searchInput.value = "";
+      ctx.focusedIndex = -1;
+      ctx.expandedDirs.clear();
+      ctx.manuallyCollapsed.clear();
+      ctx.searchInput.placeholder = `Search repositories (${msg.repos.length})`;
+      repoHeader.textContent = "";
+      repoHeader.style.display = "none";
+      render(ctx);
+      break;
+
+    case "setFiles": {
+      resetTabNavMode();
+      ctx.mode = "files";
+      ctx.allFiles = msg.files;
+      ctx.subRepos = msg.subRepos;
+
+      const repoName: string = msg.repoName;
+      repoHeader.textContent = shortRepoName(repoName);
+      repoHeader.style.display = "";
+      ctx.searchInput.placeholder = `Search files in ${repoName} (${msg.files.length} files)`;
+
+      if (msg.savedState) {
+        // Restore saved tab state
+        ctx.expandedDirs = new Set(msg.savedState.expandedDirs);
+        ctx.manuallyCollapsed = new Set(msg.savedState.manuallyCollapsed);
+        ctx.searchInput.value = msg.savedState.searchQuery;
+        ctx.focusedIndex = msg.savedState.focusedIndex;
+      } else {
+        // New tab defaults
+        ctx.searchInput.value = "";
+        ctx.focusedIndex = -1;
+        ctx.expandedDirs.clear();
+        ctx.manuallyCollapsed.clear();
+
+        // Pre-expand directories to reveal the active file
+        const activeFile: string | undefined = msg.activeFile;
+        if (activeFile) {
+          const parts = activeFile.split("/");
+          for (let i = 1; i < parts.length; i++) {
+            ctx.expandedDirs.add(parts.slice(0, i).join("/"));
+          }
+        }
+      }
+
+      render(ctx);
+
+      if (msg.savedState && ctx.focusedIndex >= 0) {
+        const el = ctx.listContainer.querySelector(".focused");
+        if (el) el.scrollIntoView({ block: "center" });
+      } else if (!msg.savedState && msg.activeFile) {
+        ctx.focusedIndex = ctx.visibleItems.findIndex(
+          (item: FlatItem) => !item.isDir && item.path === msg.activeFile
+        );
+        if (ctx.focusedIndex >= 0) {
+          render(ctx);
+          const el = ctx.listContainer.querySelector(".focused");
+          if (el) el.scrollIntoView({ block: "center" });
+        }
+      }
+      break;
+    }
+
+    case "showRepoList":
+      resetTabNavMode();
+      ctx.mode = "repos";
+      ctx.allFiles = [];
+      ctx.subRepos = [];
+      ctx.searchInput.value = "";
+      ctx.focusedIndex = -1;
+      ctx.expandedDirs.clear();
+      ctx.manuallyCollapsed.clear();
+      ctx.searchInput.placeholder = `Search repositories (${ctx.repos.length})`;
+      repoHeader.textContent = "";
+      repoHeader.style.display = "none";
+      render(ctx);
+      break;
+
+    case "updateTabs":
+      ctx.tabs = msg.tabs;
+      ctx.activeTabIndex = msg.activeIndex;
+      renderTabBar();
+      break;
+
+    case "focusInput":
+      ctx.searchInput.focus();
+      break;
   }
-}
+});
 
+// Notify extension that webview is ready
+vscodeApi.postMessage({ type: "ready" });
 requestAnimationFrame(() => ctx.searchInput.focus());
