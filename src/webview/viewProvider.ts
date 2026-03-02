@@ -184,7 +184,7 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
 
   public showRepoList(): void {
     this.activeTabIndex = -1;
-    this.view?.webview.postMessage({ type: "showRepoList" });
+    this.view?.webview.postMessage({ type: "showRepoList", repos: this.repos });
     this.sendTabsUpdate();
   }
 
@@ -335,7 +335,6 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     <input type="text" class="search-input" id="searchInput" autofocus />
   </div>
   <div class="tab-bar" id="tabBar"></div>
-  <div class="repo-header" id="repoHeader" style="display:none"></div>
   <div class="list-container" id="listContainer"></div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>

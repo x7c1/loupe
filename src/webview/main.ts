@@ -30,11 +30,16 @@ const ctx = {
   manuallyCollapsed: new Set<string>(),
 };
 
-const repoHeader = document.getElementById("repoHeader") as HTMLDivElement;
-
-function shortRepoName(name: string): string {
+function tabDisplayName(name: string, allNames: string[]): string {
   const parts = name.split("/");
-  return parts.length > 2 ? parts.slice(-2).join("/") : name;
+  const baseName = parts[parts.length - 1];
+  const hasDuplicate = allNames.some(
+    n => n !== name && n.split("/").pop() === baseName
+  );
+  if (hasDuplicate && parts.length >= 2) {
+    return parts.slice(-2).join("/");
+  }
+  return baseName;
 }
 
 function esc(t: string): string {
@@ -61,13 +66,16 @@ function renderTabBar(): void {
     tabBarEl.innerHTML = "";
     return;
   }
+  const allNames = ctx.tabs.map(t => t.repoName);
   tabBarEl.innerHTML = ctx.tabs.map((tab, i) => {
     const active = i === ctx.activeTabIndex ? " active" : "";
     return '<div class="tab-item' + active + '" data-repo-path="' + esc(tab.repoPath) + '">'
-      + '<span class="tab-label">' + esc(shortRepoName(tab.repoName)) + '</span>'
+      + '<span class="tab-label">' + esc(tabDisplayName(tab.repoName, allNames)) + '</span>'
       + '<span class="tab-close" data-tab-close="true">&times;</span>'
       + '</div>';
   }).join("");
+  const activeEl = tabBarEl.querySelector(".tab-item.active");
+  if (activeEl) activeEl.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 // Tab bar click handling
@@ -108,8 +116,6 @@ window.addEventListener("message", (event: MessageEvent) => {
       ctx.expandedDirs.clear();
       ctx.manuallyCollapsed.clear();
       ctx.searchInput.placeholder = `Search repositories (${msg.repos.length})`;
-      repoHeader.textContent = "";
-      repoHeader.style.display = "none";
       render(ctx);
       break;
 
@@ -120,8 +126,6 @@ window.addEventListener("message", (event: MessageEvent) => {
       ctx.subRepos = msg.subRepos;
 
       const repoName: string = msg.repoName;
-      repoHeader.textContent = shortRepoName(repoName);
-      repoHeader.style.display = "";
       ctx.searchInput.placeholder = `Search files in ${repoName} (${msg.files.length} files)`;
 
       if (msg.savedState) {
@@ -168,6 +172,7 @@ window.addEventListener("message", (event: MessageEvent) => {
     case "showRepoList":
       resetTabNavMode();
       ctx.mode = "repos";
+      ctx.repos = msg.repos;
       ctx.allFiles = [];
       ctx.subRepos = [];
       ctx.searchInput.value = "";
@@ -175,8 +180,6 @@ window.addEventListener("message", (event: MessageEvent) => {
       ctx.expandedDirs.clear();
       ctx.manuallyCollapsed.clear();
       ctx.searchInput.placeholder = `Search repositories (${ctx.repos.length})`;
-      repoHeader.textContent = "";
-      repoHeader.style.display = "none";
       render(ctx);
       break;
 

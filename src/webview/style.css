@@ -102,17 +102,6 @@ body {
   background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
 }
 
-.repo-header {
-  padding: 2px 8px;
-  font-size: 0.9em;
-  color: var(--vscode-descriptionForeground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: right;
-  flex-shrink: 0;
-}
-
 .list-container {
   flex: 1;
   overflow-y: auto;
