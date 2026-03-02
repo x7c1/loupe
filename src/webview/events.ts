@@ -10,6 +10,7 @@ interface EventContext extends RenderContext {
   tabNavMode: boolean;
   tabNavFilter: string;
   tabNavFocusIndex: number;
+  tabNavPreserve: boolean;
 }
 
 export function setupEventHandlers(ctx: EventContext): void {
@@ -53,11 +54,11 @@ function setupClick(ctx: EventContext): void {
 
 function setupKeyboard(ctx: EventContext): void {
   ctx.searchInput.addEventListener("keydown", (e: KeyboardEvent) => {
-    // Tab key enters tab navigation mode
-    if (e.key === "Tab" && !e.shiftKey && ctx.tabs.length > 0) {
+    // Tab key switches to adjacent tab and enters tab navigation mode
+    if (e.key === "Tab" && ctx.tabs.length > 1) {
       e.preventDefault();
       e.stopPropagation();
-      enterTabNavMode(ctx);
+      enterTabNavMode(ctx, e.shiftKey ? -1 : 1);
       return;
     }
 
@@ -86,11 +87,11 @@ function setupKeyboard(ctx: EventContext): void {
 
   ctx.listContainer.tabIndex = 0;
   ctx.listContainer.addEventListener("keydown", (e: KeyboardEvent) => {
-    // Tab key enters tab navigation mode
-    if (e.key === "Tab" && !e.shiftKey && ctx.tabs.length > 0) {
+    // Tab key switches to adjacent tab and enters tab navigation mode
+    if (e.key === "Tab" && ctx.tabs.length > 1) {
       e.preventDefault();
       e.stopPropagation();
-      enterTabNavMode(ctx);
+      enterTabNavMode(ctx, e.shiftKey ? -1 : 1);
       return;
     }
 
@@ -120,7 +121,9 @@ function setupTabNavigation(ctx: EventContext): void {
     if (e.key === "Tab") {
       e.preventDefault();
       e.stopPropagation();
-      cycleTabFocus(ctx, e.shiftKey ? -1 : 1);
+      ctx.tabNavFilter = "";
+      clearTabNavVisuals(ctx);
+      switchToAdjacentTab(ctx, e.shiftKey ? -1 : 1);
       return;
     }
 
@@ -134,17 +137,23 @@ function setupTabNavigation(ctx: EventContext): void {
     if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
-      const visible = getVisibleTabs(ctx);
-      const focused = visible[ctx.tabNavFocusIndex];
-      if (focused) {
-        const repoPath = focused.dataset.repoPath!;
-        const state = collectState(ctx);
+      if (ctx.tabNavFilter.length > 0) {
+        // Filter active — switch to the focused filtered tab
+        const visible = getVisibleTabs(ctx);
+        const focused = visible[ctx.tabNavFocusIndex];
+        if (focused) {
+          const repoPath = focused.dataset.repoPath!;
+          const state = collectState(ctx);
+          exitTabNavMode(ctx);
+          ctx.vscode.postMessage({
+            type: "switchTab",
+            repoPath,
+            currentState: state,
+          });
+        }
+      } else {
+        // No filter — tab already switched by Tab key, just exit
         exitTabNavMode(ctx);
-        ctx.vscode.postMessage({
-          type: "switchTab",
-          repoPath,
-          currentState: state,
-        });
       }
       return;
     }
@@ -174,14 +183,25 @@ function setupTabNavigation(ctx: EventContext): void {
   });
 }
 
-function enterTabNavMode(ctx: EventContext): void {
-  if (ctx.tabs.length === 0) return;
+function enterTabNavMode(ctx: EventContext, direction: number): void {
+  if (ctx.tabs.length <= 1) return;
   ctx.tabNavMode = true;
   ctx.tabNavFilter = "";
   ctx.tabNavFocusIndex = 0;
-  clearTabNavVisuals(ctx);
-  updateTabFocus(ctx);
+  switchToAdjacentTab(ctx, direction);
   ctx.tabBar.focus();
+}
+
+function switchToAdjacentTab(ctx: EventContext, direction: number): void {
+  if (ctx.tabs.length <= 1) return;
+  const nextIndex = (ctx.activeTabIndex + direction + ctx.tabs.length) % ctx.tabs.length;
+  const nextTab = ctx.tabs[nextIndex];
+  ctx.tabNavPreserve = true;
+  ctx.vscode.postMessage({
+    type: "switchTab",
+    repoPath: nextTab.repoPath,
+    currentState: collectState(ctx),
+  });
 }
 
 function exitTabNavMode(ctx: EventContext): void {

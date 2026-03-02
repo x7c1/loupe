@@ -21,6 +21,7 @@ const ctx = {
   tabNavMode: false,
   tabNavFilter: "",
   tabNavFocusIndex: 0,
+  tabNavPreserve: false,
   vscode: vscodeApi,
   searchInput: document.getElementById("searchInput") as HTMLInputElement,
   listContainer: document.getElementById("listContainer") as HTMLDivElement,
@@ -56,6 +57,10 @@ function collectCurrentState(): object {
 }
 
 function resetTabNavMode(): void {
+  if (ctx.tabNavPreserve) {
+    ctx.tabNavPreserve = false;
+    return;
+  }
   ctx.tabNavMode = false;
   ctx.tabNavFilter = "";
   ctx.tabNavFocusIndex = 0;
