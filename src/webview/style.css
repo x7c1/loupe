@@ -70,11 +70,6 @@ body {
   border-bottom: 2px solid var(--vscode-focusBorder, #007fd4);
 }
 
-.tab-item.tab-focused {
-  background: var(--vscode-list-focusBackground, var(--vscode-list-activeSelectionBackground, #04395e));
-  color: var(--vscode-list-focusForeground, var(--vscode-list-activeSelectionForeground, #fff));
-}
-
 .tab-item .tab-label {
   overflow: hidden;
   text-overflow: ellipsis;

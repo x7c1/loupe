@@ -17,11 +17,6 @@ const ctx = {
   subRepos: [] as string[],
   tabs: [] as TabInfo[],
   activeTabIndex: -1,
-  tabBar: tabBarEl,
-  tabNavMode: false,
-  tabNavFilter: "",
-  tabNavFocusIndex: 0,
-  tabNavPreserve: false,
   vscode: vscodeApi,
   searchInput: document.getElementById("searchInput") as HTMLInputElement,
   listContainer: document.getElementById("listContainer") as HTMLDivElement,
@@ -56,16 +51,6 @@ function collectCurrentState(): object {
   };
 }
 
-function resetTabNavMode(): void {
-  if (ctx.tabNavPreserve) {
-    ctx.tabNavPreserve = false;
-    return;
-  }
-  ctx.tabNavMode = false;
-  ctx.tabNavFilter = "";
-  ctx.tabNavFocusIndex = 0;
-}
-
 function renderTabBar(): void {
   if (ctx.tabs.length === 0) {
     tabBarEl.innerHTML = "";
@@ -90,9 +75,6 @@ tabBarEl.addEventListener("click", (e: MouseEvent) => {
   if (!tabEl) return;
   const repoPath = tabEl.dataset.repoPath!;
 
-  // Exit tab nav mode if active
-  resetTabNavMode();
-
   if (closeBtn) {
     vscodeApi.postMessage({ type: "closeTab", repoPath });
   } else {
@@ -111,7 +93,6 @@ window.addEventListener("message", (event: MessageEvent) => {
   const msg = event.data;
   switch (msg.type) {
     case "setRepos":
-      resetTabNavMode();
       ctx.mode = "repos";
       ctx.repos = msg.repos;
       ctx.allFiles = [];
@@ -125,7 +106,6 @@ window.addEventListener("message", (event: MessageEvent) => {
       break;
 
     case "setFiles": {
-      resetTabNavMode();
       ctx.mode = "files";
       ctx.allFiles = msg.files;
       ctx.subRepos = msg.subRepos;
@@ -175,7 +155,6 @@ window.addEventListener("message", (event: MessageEvent) => {
     }
 
     case "showRepoList":
-      resetTabNavMode();
       ctx.mode = "repos";
       ctx.repos = msg.repos;
       ctx.allFiles = [];
