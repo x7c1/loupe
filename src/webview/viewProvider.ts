@@ -192,6 +192,10 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     this.view?.webview.postMessage({ type: "focusInput" });
   }
 
+  public sendDemoMessage(msg: unknown): void {
+    this.view?.webview.postMessage(msg);
+  }
+
   public focusActiveFile(activeFile?: string): void {
     if (!activeFile) return;
     this.view?.webview.postMessage({ type: "focusFile", activeFile });

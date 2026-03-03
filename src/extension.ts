@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { findGitRepos, listGitFiles } from "./git";
 import { FileTreeViewProvider } from "./webview/viewProvider";
+import { runDemo, parseDemoScript } from "./demo";
 
 export function activate(context: vscode.ExtensionContext) {
   const provider = new FileTreeViewProvider(context.extensionUri);
@@ -78,6 +79,27 @@ export function activate(context: vscode.ExtensionContext) {
         await scanAndSendRepos(provider);
       }
       provider.focusInput();
+    })
+  );
+
+  // Run a demo script
+  context.subscriptions.push(
+    vscode.commands.registerCommand("loupe.demo", async () => {
+      const defaultDir = vscode.Uri.joinPath(context.extensionUri, "demo");
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        defaultUri: defaultDir,
+        filters: { "Demo Script": ["jsonc", "json"] },
+        title: "Select a demo script",
+      });
+      if (!fileUri || fileUri.length === 0) return;
+      const content = await vscode.workspace.fs.readFile(fileUri[0]);
+      try {
+        const steps = parseDemoScript(Buffer.from(content).toString("utf-8"));
+        await runDemo(provider, steps);
+      } catch (e) {
+        vscode.window.showErrorMessage(`Loupe: Failed to parse demo script: ${e}`);
+      }
     })
   );
 

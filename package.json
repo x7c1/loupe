@@ -71,6 +71,10 @@
         "command": "loupe.refresh",
         "title": "Loupe: Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "loupe.demo",
+        "title": "Loupe: Run Demo Script"
       }
     ],
     "menus": {

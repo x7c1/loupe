@@ -26,6 +26,23 @@ export function setupMessageHandlers(ctx: AppContext, tabBarEl: HTMLDivElement):
       renderTabBar(ctx, tabBarEl);
     },
     focusInput: () => ctx.searchInput.focus(),
+    "demo:type": (msg: { char: string }) => {
+      ctx.searchInput.value += msg.char;
+      ctx.searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    "demo:key": (msg: { key: string; ctrlKey?: boolean; shiftKey?: boolean }) => {
+      const target = document.activeElement === ctx.listContainer
+        ? ctx.listContainer
+        : ctx.searchInput;
+      target.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: msg.key,
+          ctrlKey: msg.ctrlKey ?? false,
+          shiftKey: msg.shiftKey ?? false,
+          bubbles: true,
+        })
+      );
+    },
   };
 
   window.addEventListener("message", (event: MessageEvent) => {
