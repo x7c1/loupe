@@ -1,5 +1,5 @@
 import { RenderContext, render } from "./render";
-import { firstFileIndex, nextFileIndex, prevFileIndex } from "./navigation";
+import { firstFileIndex, nextFileIndex, prevFileIndex, nextFileOnlyIndex, prevFileOnlyIndex } from "./navigation";
 import { TabInfo } from "./types";
 
 interface EventContext extends RenderContext {
@@ -151,6 +151,26 @@ function reportState(ctx: EventContext): void {
 // --- Shared key handlers ---
 
 function handleArrowKeys(e: KeyboardEvent, ctx: EventContext): boolean {
+  // Ctrl+Down / Ctrl+Up: skip directories, jump between files only
+  if ((e.ctrlKey || e.metaKey) && ctx.mode === "files") {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      ctx.focusedIndex = nextFileOnlyIndex(ctx.visibleItems, ctx.focusedIndex);
+      render(ctx);
+      scrollToFocused(ctx);
+      reportState(ctx);
+      return true;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      ctx.focusedIndex = prevFileOnlyIndex(ctx.visibleItems, ctx.focusedIndex);
+      render(ctx);
+      scrollToFocused(ctx);
+      reportState(ctx);
+      return true;
+    }
+  }
+
   if (e.key === "ArrowDown") {
     e.preventDefault();
     if (ctx.mode === "files") {

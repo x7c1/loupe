@@ -27,3 +27,27 @@ export function prevFileIndex(items: FlatItem[], current: number): number {
   if (items.length === 0) return -1;
   return current > 0 ? current - 1 : items.length - 1;
 }
+
+/**
+ * Find the index of the next non-directory item after the current position.
+ * Wraps around to the beginning when reaching the end.
+ */
+export function nextFileOnlyIndex(items: FlatItem[], current: number): number {
+  for (let i = 1; i <= items.length; i++) {
+    const idx = (current + i) % items.length;
+    if (!items[idx].isDir) return idx;
+  }
+  return current;
+}
+
+/**
+ * Find the index of the previous non-directory item before the current position.
+ * Wraps around to the end when reaching the beginning.
+ */
+export function prevFileOnlyIndex(items: FlatItem[], current: number): number {
+  for (let i = 1; i <= items.length; i++) {
+    const idx = (current - i + items.length) % items.length;
+    if (!items[idx].isDir) return idx;
+  }
+  return current;
+}
