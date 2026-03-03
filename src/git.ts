@@ -13,34 +13,16 @@ export async function findGitRepos(
   maxDepth: number = 5
 ): Promise<string[]> {
   try {
-    const { stdout } = await execFileAsync(
-      "find",
-      [
-        rootDir,
-        "-maxdepth",
-        String(maxDepth + 1),
-        "(",
-        "-name",
-        "node_modules",
-        "-o",
-        "-name",
-        "target",
-        ")",
-        "-prune",
-        "-o",
-        "-name",
-        ".git",
-        "(",
-        "-type",
-        "d",
-        "-o",
-        "-type",
-        "f",
-        ")",
-        "-print",
-      ],
-      { maxBuffer: 10 * 1024 * 1024 }
-    );
+    const args = [
+      rootDir,
+      `-maxdepth ${maxDepth + 1}`,
+      "( -name node_modules -o -name target -o -name .gradle -o -name .cache ) -prune",
+      "-o -name .git ( -type d -o -type f ) -print",
+    ].flatMap(s => s.split(" "));
+
+    const { stdout } = await execFileAsync("find", args, {
+      maxBuffer: 10 * 1024 * 1024,
+    });
     return stdout
       .split("\n")
       .map((l) => l.trim())
