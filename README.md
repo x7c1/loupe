@@ -44,6 +44,7 @@ Loupe provides file search for these sub-repositories by scanning for `.git` dir
 |---|---|---|
 | `loupe.maxDepth` | `5` | Maximum directory depth to scan for sub-repositories |
 | `loupe.maxTabs` | `10` | Maximum number of open repository tabs (LRU eviction) |
+| `loupe.excludeDirs` | `["node_modules", "target", ".gradle", ".cache"]` | Directory names to skip during repository scan |
 
 ## Installation
 
