@@ -1,15 +1,19 @@
 import { RenderContext, render } from "./render";
-import { firstFileIndex, nextFileIndex, prevFileIndex } from "./navigation";
+import { firstFileIndex, nextFileIndex, prevFileIndex, nextFileOnlyIndex, prevFileOnlyIndex } from "./navigation";
+import { TabInfo } from "./types";
 
 interface EventContext extends RenderContext {
   readonly vscode: { postMessage(message: unknown): void };
+  readonly tabs: TabInfo[];
+  readonly activeTabIndex: number;
+  readonly searchInput: HTMLInputElement;
+  readonly listContainer: HTMLDivElement;
 }
 
 export function setupEventHandlers(ctx: EventContext): void {
   setupSearch(ctx);
   setupClick(ctx);
   setupKeyboard(ctx);
-  setupMessages(ctx);
 }
 
 function setupSearch(ctx: EventContext): void {
@@ -20,6 +24,7 @@ function setupSearch(ctx: EventContext): void {
       const query = ctx.searchInput.value.trim();
       ctx.focusedIndex = -1;
       ctx.manuallyCollapsed.clear();
+      if (query.length === 0) ctx.expandedDirs.clear();
       render(ctx);
       if (query.length > 0 && ctx.mode === "files") {
         ctx.focusedIndex = firstFileIndex(ctx.visibleItems);
@@ -29,6 +34,7 @@ function setupSearch(ctx: EventContext): void {
         render(ctx);
       }
       scrollToFocused(ctx);
+      reportState(ctx);
     }, 100);
   });
 }
@@ -45,6 +51,9 @@ function setupClick(ctx: EventContext): void {
 
 function setupKeyboard(ctx: EventContext): void {
   ctx.searchInput.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (handleTabSwitch(e, ctx)) return;
+    if (handleGoBack(e, ctx)) return;
+
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
@@ -54,9 +63,14 @@ function setupKeyboard(ctx: EventContext): void {
         ctx.searchInput.value = lastSpace === -1 ? "" : val.slice(0, lastSpace);
         ctx.focusedIndex = -1;
         ctx.manuallyCollapsed.clear();
+        if (ctx.searchInput.value.length === 0) ctx.expandedDirs.clear();
         render(ctx);
+        reportState(ctx);
       } else if (ctx.mode === "files") {
-        ctx.vscode.postMessage({ type: "goBack" });
+        ctx.vscode.postMessage({
+          type: "goBack",
+          currentState: collectState(ctx),
+        });
       }
       return;
     }
@@ -66,6 +80,9 @@ function setupKeyboard(ctx: EventContext): void {
 
   ctx.listContainer.tabIndex = 0;
   ctx.listContainer.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (handleTabSwitch(e, ctx)) return;
+    if (handleGoBack(e, ctx)) return;
+
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
@@ -81,17 +98,79 @@ function setupKeyboard(ctx: EventContext): void {
   });
 }
 
-function setupMessages(ctx: EventContext): void {
-  window.addEventListener("message", (event: MessageEvent) => {
-    if (event.data.type === "focusInput") {
-      ctx.searchInput.focus();
-    }
+// --- Go back to repo list (Ctrl+Escape) ---
+
+function handleGoBack(e: KeyboardEvent, ctx: EventContext): boolean {
+  if (e.key !== "Escape" || !(e.ctrlKey || e.metaKey)) return false;
+  if (ctx.mode !== "files") return false;
+  e.preventDefault();
+  e.stopPropagation();
+  ctx.vscode.postMessage({
+    type: "goBack",
+    currentState: collectState(ctx),
+  });
+  return true;
+}
+
+// --- Tab switching ---
+
+function handleTabSwitch(e: KeyboardEvent, ctx: EventContext): boolean {
+  if (e.key !== "Tab" || ctx.tabs.length <= 1) return false;
+  const direction = e.shiftKey ? -1 : 1;
+  const nextIndex = ctx.activeTabIndex + direction;
+  if (nextIndex < 0 || nextIndex >= ctx.tabs.length) return false; // let default Tab through
+  e.preventDefault();
+  e.stopPropagation();
+  ctx.vscode.postMessage({
+    type: "switchTab",
+    repoPath: ctx.tabs[nextIndex].repoPath,
+    currentState: collectState(ctx),
+  });
+  return true;
+}
+
+// --- State reporting ---
+
+function collectState(ctx: EventContext): object {
+  return {
+    expandedDirs: Array.from(ctx.expandedDirs),
+    manuallyCollapsed: Array.from(ctx.manuallyCollapsed),
+    searchQuery: ctx.searchInput.value,
+    focusedIndex: ctx.focusedIndex,
+  };
+}
+
+function reportState(ctx: EventContext): void {
+  if (ctx.mode !== "files") return;
+  ctx.vscode.postMessage({
+    type: "reportState",
+    state: collectState(ctx),
   });
 }
 
 // --- Shared key handlers ---
 
 function handleArrowKeys(e: KeyboardEvent, ctx: EventContext): boolean {
+  // Ctrl+Down / Ctrl+Up: skip directories, jump between files only
+  if ((e.ctrlKey || e.metaKey) && ctx.mode === "files") {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      ctx.focusedIndex = nextFileOnlyIndex(ctx.visibleItems, ctx.focusedIndex);
+      render(ctx);
+      scrollToFocused(ctx);
+      reportState(ctx);
+      return true;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      ctx.focusedIndex = prevFileOnlyIndex(ctx.visibleItems, ctx.focusedIndex);
+      render(ctx);
+      scrollToFocused(ctx);
+      reportState(ctx);
+      return true;
+    }
+  }
+
   if (e.key === "ArrowDown") {
     e.preventDefault();
     if (ctx.mode === "files") {
@@ -102,6 +181,7 @@ function handleArrowKeys(e: KeyboardEvent, ctx: EventContext): boolean {
     }
     render(ctx);
     scrollToFocused(ctx);
+    reportState(ctx);
     return true;
   }
 
@@ -128,6 +208,7 @@ function handleArrowKeys(e: KeyboardEvent, ctx: EventContext): boolean {
         ctx.searchInput.focus();
       }
     }
+    reportState(ctx);
     return true;
   }
 
@@ -148,12 +229,14 @@ function handleTreeToggle(e: KeyboardEvent, ctx: EventContext): boolean {
     e.preventDefault();
     toggleDir(ctx, item.path, true);
     render(ctx);
+    reportState(ctx);
     return true;
   }
   if (e.key === "ArrowLeft" && item.isExpanded) {
     e.preventDefault();
     toggleDir(ctx, item.path, false);
     render(ctx);
+    reportState(ctx);
     return true;
   }
   return false;
@@ -183,10 +266,15 @@ function acceptFocused(ctx: EventContext): void {
   if (ctx.mode === "repos") {
     ctx.vscode.postMessage({ type: "selectRepo", path: item.path, label: item.label });
   } else if (item.isSubRepo) {
-    ctx.vscode.postMessage({ type: "selectSubRepo", path: item.path });
+    ctx.vscode.postMessage({
+      type: "selectSubRepo",
+      path: item.path,
+      currentState: collectState(ctx),
+    });
   } else if (item.isDir) {
     toggleDir(ctx, item.path, !item.isExpanded);
     render(ctx);
+    reportState(ctx);
   } else {
     ctx.vscode.postMessage({ type: "openFile", path: item.path });
   }

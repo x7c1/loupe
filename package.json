@@ -25,6 +25,26 @@
           "minimum": 1,
           "maximum": 20,
           "description": "Maximum directory depth to scan for sub-repositories with .git"
+        },
+        "loupe.maxTabs": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Maximum number of open tabs. When exceeded, the least recently used tab is closed."
+        },
+        "loupe.excludeDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "node_modules",
+            "target",
+            ".gradle",
+            ".cache"
+          ],
+          "description": "Directory names to skip during repository scan"
         }
       }
     },
@@ -51,6 +71,10 @@
         "command": "loupe.refresh",
         "title": "Loupe: Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "loupe.demo",
+        "title": "Loupe: Run Demo Script"
       }
     ],
     "menus": {

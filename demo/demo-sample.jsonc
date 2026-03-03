@@ -1,0 +1,83 @@
+[
+  // 1. Open Loupe and go to repo list
+  { "action": "command", "command": "loupe.focus" },
+  { "action": "wait", "ms": 750 },
+  { "action": "key", "key": "Escape", "ctrlKey": true },
+  { "action": "wait", "ms": 500 },
+
+  // 2. Select "loupe" repo by searching
+  { "action": "type", "text": "loupe", "charDelay": 150 },
+  { "action": "wait", "ms": 500 },
+  { "action": "key", "key": "Enter" },
+  { "action": "wait", "ms": 1000 },
+
+  // 3. Search for files with AND matching: "readme" AND "tab"
+  { "action": "type", "text": "readme tab", "charDelay": 150 },
+  { "action": "wait", "ms": 500 },
+  { "action": "key", "key": "Enter" },
+  { "action": "wait", "ms": 1000 },
+
+  // 4. Return to Loupe from editor, go back to repo list
+  { "action": "command", "command": "loupe.focus" },
+  { "action": "wait", "ms": 750 },
+  { "action": "key", "key": "Escape", "ctrlKey": true },
+  { "action": "wait", "ms": 500 },
+
+  // 5. Select "sutto" repo (filtering with "sutto x7")
+  { "action": "type", "text": "sutto x7 ", "charDelay": 150 },
+  { "action": "wait", "ms": 500 },
+  { "action": "key", "key": "Enter" },
+  { "action": "wait", "ms": 1000 },
+
+  // 6. Search for a file and open it
+  { "action": "type", "text": "plans adr space win", "charDelay": 150 },
+  { "action": "wait", "ms": 500 },
+  { "action": "key", "key": "Enter" },
+  { "action": "wait", "ms": 1500 },
+
+  // 7. Esc twice: clear search term, then clear previous term
+  { "action": "key", "key": "Escape" },
+  { "action": "wait", "ms": 750 },
+  { "action": "key", "key": "Escape" },
+  { "action": "wait", "ms": 750 },
+
+  // 8. Return to Loupe, go back to repo list, select "pigeon"
+  { "action": "command", "command": "loupe.focus" },
+  { "action": "wait", "ms": 750 },
+  { "action": "key", "key": "Escape", "ctrlKey": true },
+  { "action": "wait", "ms": 500 },
+  { "action": "type", "text": "pigeon", "charDelay": 150 },
+  { "action": "wait", "ms": 500 },
+  { "action": "key", "key": "Enter" },
+  { "action": "wait", "ms": 1000 },
+
+  // 9. Navigate files: Ctrl+Down to jump to first file, then Down twice
+  { "action": "key", "key": "ArrowDown", "ctrlKey": true },
+  { "action": "wait", "ms": 250 },
+  { "action": "key", "key": "ArrowDown" },
+  { "action": "wait", "ms": 250 },
+  { "action": "key", "key": "ArrowDown" },
+  { "action": "wait", "ms": 500 },
+
+  // 10. Shift+Tab twice: switch back through open repo tabs
+  { "action": "key", "key": "Tab", "shiftKey": true },
+  { "action": "wait", "ms": 500 },
+  { "action": "key", "key": "Tab", "shiftKey": true },
+  { "action": "wait", "ms": 500 },
+
+  // 11. Esc twice: clear search term step by step
+  { "action": "key", "key": "Escape" },
+  { "action": "wait", "ms": 750 },
+  { "action": "key", "key": "Escape" },
+  { "action": "wait", "ms": 750 },
+
+  // 12. Search "readme", Ctrl+Up to jump to last file, open it
+  { "action": "type", "text": "readme", "charDelay": 150 },
+  { "action": "wait", "ms": 500 },
+  { "action": "key", "key": "ArrowUp", "ctrlKey": true },
+  { "action": "wait", "ms": 250 },
+  { "action": "key", "key": "Enter" },
+  { "action": "wait", "ms": 1500 },
+
+  { "action": "wait", "ms": 500 }
+]

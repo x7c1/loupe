@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { findGitRepos, listGitFiles } from "./git";
 import { FileTreeViewProvider } from "./webview/viewProvider";
+import { runDemo, parseDemoScript } from "./demo";
 
 export function activate(context: vscode.ExtensionContext) {
   const provider = new FileTreeViewProvider(context.extensionUri);
@@ -17,6 +18,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Ctrl+G Ctrl+G: focus the webview (scan repos if first time)
   context.subscriptions.push(
     vscode.commands.registerCommand("loupe.focus", async () => {
+      // Capture active editor BEFORE focusing the webview
+      // (focusing the sidebar can make activeTextEditor stale)
+      const activeEditor = vscode.window.activeTextEditor;
+
       // Ensure the view is visible and focused
       await vscode.commands.executeCommand(
         "loupe.fileTreeView.focus"
@@ -27,19 +32,21 @@ export function activate(context: vscode.ExtensionContext) {
         provider.storeRepos(repos);
       }
 
-      const matched = findRepoForActiveEditor(provider.getRepos());
+      const matched = findRepoForActiveEditor(provider.getRepos(), activeEditor);
       if (matched) {
-        // Switch repo if different from current selection
+        const activePath = activeEditor?.document.uri.fsPath;
+        const activeFile = activePath
+          ? path.relative(matched.path, activePath)
+          : undefined;
         const current = provider.hasSelectedRepo()
           ? provider.getSelectedRepo()
           : null;
         if (!current || current.repoPath !== matched.path) {
-          const activePath = vscode.window.activeTextEditor?.document.uri.fsPath;
-          const activeFile = activePath
-            ? path.relative(matched.path, activePath)
-            : undefined;
           const { files, subRepos } = await loadFilesAndSubRepos(matched.path, matched.label);
           provider.setFiles(matched.path, matched.label, files, { activeFile, subRepos });
+        } else {
+          // Same repo already active — just focus the active file
+          provider.focusActiveFile(activeFile);
         }
       } else if (!provider.hasSelectedRepo()) {
         // No active file match and no repo selected - show repo list
@@ -75,16 +82,31 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Handle repo selection from webview
+  // Run a demo script
+  context.subscriptions.push(
+    vscode.commands.registerCommand("loupe.demo", async () => {
+      const defaultDir = vscode.Uri.joinPath(context.extensionUri, "demo");
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        defaultUri: defaultDir,
+        filters: { "Demo Script": ["jsonc", "json"] },
+        title: "Select a demo script",
+      });
+      if (!fileUri || fileUri.length === 0) return;
+      const content = await vscode.workspace.fs.readFile(fileUri[0]);
+      try {
+        const steps = parseDemoScript(Buffer.from(content).toString("utf-8"));
+        await runDemo(provider, steps);
+      } catch (e) {
+        vscode.window.showErrorMessage(`Loupe: Failed to parse demo script: ${e}`);
+      }
+    })
+  );
+
+  // Handle repo selection from webview (also handles sub-repo navigation)
   provider.onRepoSelected(async (repoPath: string, repoName: string) => {
     const { files, subRepos } = await loadFilesAndSubRepos(repoPath, repoName);
     provider.setFiles(repoPath, repoName, files, { subRepos });
-  });
-
-  // Handle navigating back to parent repo
-  provider.onGoBack(async (repoPath, repoName, focusPath) => {
-    const { files, subRepos } = await loadFilesAndSubRepos(repoPath, repoName);
-    provider.setFiles(repoPath, repoName, files, { activeFile: focusPath, subRepos });
   });
 }
 
@@ -106,6 +128,7 @@ async function scanRepos(): Promise<
 
   const config = vscode.workspace.getConfiguration("loupe");
   const maxDepth = config.get<number>("maxDepth", 5);
+  const excludeDirs = config.get<string[]>("excludeDirs", []);
   const multiWorkspace = workspaceFolders.length > 1;
 
   const repos: { path: string; label: string; description: string }[] = [];
@@ -118,7 +141,7 @@ async function scanRepos(): Promise<
     },
     async () => {
       const scanPromises = workspaceFolders.map(async (folder) => {
-        const found = await findGitRepos(folder.uri.fsPath, maxDepth);
+        const found = await findGitRepos(folder.uri.fsPath, maxDepth, excludeDirs);
         for (const repo of found) {
           const relPath = path.relative(folder.uri.fsPath, repo);
           repos.push({
@@ -137,9 +160,10 @@ async function scanRepos(): Promise<
 }
 
 function findRepoForActiveEditor(
-  repos: { path: string; label: string }[]
+  repos: { path: string; label: string }[],
+  editor?: vscode.TextEditor
 ): { path: string; label: string } | undefined {
-  const activePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+  const activePath = editor?.document.uri.fsPath;
   if (!activePath) {
     return undefined;
   }
@@ -173,9 +197,10 @@ async function loadFilesAndSubRepos(
     async () => {
       const config = vscode.workspace.getConfiguration("loupe");
       const maxDepth = config.get<number>("maxDepth", 5);
+      const excludeDirs = config.get<string[]>("excludeDirs", []);
       const [files, childRepos] = await Promise.all([
         listGitFiles(repoPath),
-        findGitRepos(repoPath, maxDepth),
+        findGitRepos(repoPath, maxDepth, excludeDirs),
       ]);
       // Exclude the repo itself, keep only nested sub-repos
       const subRepos = childRepos

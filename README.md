@@ -11,27 +11,24 @@ Loupe provides file search for these sub-repositories by scanning for `.git` dir
 ## Features
 
 - Scans workspace for sub-repositories (directories containing `.git`, including submodules)
-- Displays files in a tree view with folder expand/collapse
-- Compact folder display — single-child directory chains are merged (e.g., `src/main/scala`)
-- Space-separated AND search for filtering by file name and path
-- Opens selected files in a new editor tab
-- Keyboard-driven workflow
-- Auto-selects repository based on the currently active editor file
-- Shows sub-repositories in the file tree with navigation support
-- Hierarchical back-navigation through nested sub-repositories
+- Tree view with compact folder merging (e.g., `src/main/scala`) and space-separated AND search
+- Tabs — keep multiple repositories open and switch with `Tab`/`Shift+Tab`
+- Keyboard-driven: navigate, search, and switch repos without touching the mouse
+- Sub-repository navigation support (📦 markers in the file tree)
 
 ## Demo
 
-<video src="https://github.com/user-attachments/assets/7e305e5a-5b5d-42ab-af37-02fa815d2038" controls></video>
+<video src="https://github.com/user-attachments/assets/e3ea8058-6d44-4efb-8922-580283b21b7b" controls></video>
 
 ## Usage
 
 1. Press `Ctrl+G Ctrl+G` (`Cmd+G Cmd+G` on macOS) to open Loupe
-2. If a file is open in the editor, its repository is auto-selected
+2. If a file is open in the editor, its repository is auto-selected and the file is focused
 3. Otherwise, select a repository from the list
 4. Type to filter files (space-separated tokens for AND matching)
 5. Press `Enter` to open a file, or navigate into a sub-repository (📦)
-6. Press `Esc` to clear the search, go back to the parent repository, or return to the repository list
+6. Use `Tab`/`Shift+Tab` to switch between open repository tabs
+7. Press `Esc` to step back through search terms, or `Ctrl+Esc` to return to the repository list
 
 ## Commands
 
@@ -46,6 +43,8 @@ Loupe provides file search for these sub-repositories by scanning for `.git` dir
 | Setting | Default | Description |
 |---|---|---|
 | `loupe.maxDepth` | `5` | Maximum directory depth to scan for sub-repositories |
+| `loupe.maxTabs` | `10` | Maximum number of open repository tabs (LRU eviction) |
+| `loupe.excludeDirs` | `["node_modules", "target", ".gradle", ".cache"]` | Directory names to skip during repository scan |
 
 ## Installation
 
