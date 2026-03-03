@@ -218,6 +218,12 @@ function handleArrowKeys(e: KeyboardEvent, ctx: EventContext): boolean {
     return true;
   }
 
+  if (e.key === " " && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    previewFocused(ctx);
+    return true;
+  }
+
   return false;
 }
 
@@ -257,6 +263,13 @@ function toggleDir(ctx: EventContext, path: string, expand: boolean): void {
 function scrollToFocused(ctx: EventContext): void {
   const el = ctx.listContainer.querySelector(".focused");
   if (el) el.scrollIntoView({ block: "center" });
+}
+
+function previewFocused(ctx: EventContext): void {
+  const item = ctx.visibleItems[ctx.focusedIndex];
+  if (!item || item.isDir || item.isSubRepo) return;
+  if (ctx.mode !== "files") return;
+  ctx.vscode.postMessage({ type: "previewFile", path: item.path });
 }
 
 function acceptFocused(ctx: EventContext): void {
