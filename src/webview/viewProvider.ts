@@ -15,6 +15,7 @@ interface TabState {
 
 type WebviewMessage =
   | { type: "openFile"; path: string }
+  | { type: "previewFile"; path: string }
   | { type: "selectRepo"; path: string; label: string }
   | { type: "selectSubRepo"; path: string; currentState: WebviewState }
   | { type: "goBack"; currentState: WebviewState }
@@ -66,6 +67,16 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
         );
         vscode.workspace.openTextDocument(absPath).then((doc) => {
           vscode.window.showTextDocument(doc, { preview: false });
+        });
+      } else if (message.type === "previewFile") {
+        if (this.activeTabIndex < 0) return;
+        const tab = this.tabs[this.activeTabIndex];
+        const absPath = vscode.Uri.joinPath(
+          vscode.Uri.file(tab.repoPath),
+          message.path
+        );
+        vscode.workspace.openTextDocument(absPath).then((doc) => {
+          vscode.window.showTextDocument(doc, { preview: true, preserveFocus: true });
         });
       } else if (message.type === "selectRepo") {
         this.repoSelectedCallback?.(message.path, message.label);
