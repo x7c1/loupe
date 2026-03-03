@@ -51,6 +51,36 @@ function collectCurrentState(): object {
   };
 }
 
+function focusFileInList(c: typeof ctx, targetFile: string): void {
+  if (c.searchInput.value.length > 0) {
+    // Search active — focus the file only if it's in filtered results
+    const idx = c.visibleItems.findIndex(
+      (item: FlatItem) => !item.isDir && item.path === targetFile
+    );
+    if (idx >= 0) {
+      c.focusedIndex = idx;
+      render(c);
+      const el = c.listContainer.querySelector(".focused");
+      if (el) el.scrollIntoView({ block: "center" });
+    }
+  } else {
+    // No search — expand directories and focus the file
+    const parts = targetFile.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      c.expandedDirs.add(parts.slice(0, i).join("/"));
+    }
+    render(c);
+    c.focusedIndex = c.visibleItems.findIndex(
+      (item: FlatItem) => !item.isDir && item.path === targetFile
+    );
+    if (c.focusedIndex >= 0) {
+      render(c);
+      const el = c.listContainer.querySelector(".focused");
+      if (el) el.scrollIntoView({ block: "center" });
+    }
+  }
+}
+
 function renderTabBar(): void {
   if (ctx.tabs.length === 0) {
     tabBarEl.innerHTML = "";
@@ -138,18 +168,12 @@ window.addEventListener("message", (event: MessageEvent) => {
 
       render(ctx);
 
-      if (msg.savedState && ctx.focusedIndex >= 0) {
+      if (msg.activeFile) {
+        // Focus the active file (works for both new and existing tabs)
+        focusFileInList(ctx, msg.activeFile);
+      } else if (msg.savedState && ctx.focusedIndex >= 0) {
         const el = ctx.listContainer.querySelector(".focused");
         if (el) el.scrollIntoView({ block: "center" });
-      } else if (!msg.savedState && msg.activeFile) {
-        ctx.focusedIndex = ctx.visibleItems.findIndex(
-          (item: FlatItem) => !item.isDir && item.path === msg.activeFile
-        );
-        if (ctx.focusedIndex >= 0) {
-          render(ctx);
-          const el = ctx.listContainer.querySelector(".focused");
-          if (el) el.scrollIntoView({ block: "center" });
-        }
       }
       break;
     }
@@ -167,38 +191,9 @@ window.addEventListener("message", (event: MessageEvent) => {
       render(ctx);
       break;
 
-    case "focusFile": {
-      if (ctx.mode !== "files") break;
-      const targetFile: string = msg.activeFile;
-      if (ctx.searchInput.value.length > 0) {
-        // Search active — focus the file if it's in the current filtered results
-        const idx = ctx.visibleItems.findIndex(
-          (item: FlatItem) => !item.isDir && item.path === targetFile
-        );
-        if (idx >= 0) {
-          ctx.focusedIndex = idx;
-          render(ctx);
-          const el = ctx.listContainer.querySelector(".focused");
-          if (el) el.scrollIntoView({ block: "center" });
-        }
-      } else {
-        // No search — expand directories and focus the file
-        const parts = targetFile.split("/");
-        for (let i = 1; i < parts.length; i++) {
-          ctx.expandedDirs.add(parts.slice(0, i).join("/"));
-        }
-        render(ctx);
-        ctx.focusedIndex = ctx.visibleItems.findIndex(
-          (item: FlatItem) => !item.isDir && item.path === targetFile
-        );
-        if (ctx.focusedIndex >= 0) {
-          render(ctx);
-          const el = ctx.listContainer.querySelector(".focused");
-          if (el) el.scrollIntoView({ block: "center" });
-        }
-      }
+    case "focusFile":
+      if (ctx.mode === "files") focusFileInList(ctx, msg.activeFile);
       break;
-    }
 
     case "updateTabs":
       ctx.tabs = msg.tabs;

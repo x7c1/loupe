@@ -24,6 +24,7 @@ function setupSearch(ctx: EventContext): void {
       const query = ctx.searchInput.value.trim();
       ctx.focusedIndex = -1;
       ctx.manuallyCollapsed.clear();
+      if (query.length === 0) ctx.expandedDirs.clear();
       render(ctx);
       if (query.length > 0 && ctx.mode === "files") {
         ctx.focusedIndex = firstFileIndex(ctx.visibleItems);
@@ -61,6 +62,7 @@ function setupKeyboard(ctx: EventContext): void {
         ctx.searchInput.value = lastSpace === -1 ? "" : val.slice(0, lastSpace);
         ctx.focusedIndex = -1;
         ctx.manuallyCollapsed.clear();
+        if (ctx.searchInput.value.length === 0) ctx.expandedDirs.clear();
         render(ctx);
         reportState(ctx);
       } else if (ctx.mode === "files") {

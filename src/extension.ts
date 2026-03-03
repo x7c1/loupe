@@ -17,6 +17,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Ctrl+G Ctrl+G: focus the webview (scan repos if first time)
   context.subscriptions.push(
     vscode.commands.registerCommand("loupe.focus", async () => {
+      // Capture active editor BEFORE focusing the webview
+      // (focusing the sidebar can make activeTextEditor stale)
+      const activeEditor = vscode.window.activeTextEditor;
+
       // Ensure the view is visible and focused
       await vscode.commands.executeCommand(
         "loupe.fileTreeView.focus"
@@ -27,9 +31,9 @@ export function activate(context: vscode.ExtensionContext) {
         provider.storeRepos(repos);
       }
 
-      const matched = findRepoForActiveEditor(provider.getRepos());
+      const matched = findRepoForActiveEditor(provider.getRepos(), activeEditor);
       if (matched) {
-        const activePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+        const activePath = activeEditor?.document.uri.fsPath;
         const activeFile = activePath
           ? path.relative(matched.path, activePath)
           : undefined;
@@ -133,9 +137,10 @@ async function scanRepos(): Promise<
 }
 
 function findRepoForActiveEditor(
-  repos: { path: string; label: string }[]
+  repos: { path: string; label: string }[],
+  editor?: vscode.TextEditor
 ): { path: string; label: string } | undefined {
-  const activePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+  const activePath = editor?.document.uri.fsPath;
   if (!activePath) {
     return undefined;
   }

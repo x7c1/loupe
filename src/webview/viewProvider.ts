@@ -147,7 +147,7 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
         files: tab.files,
         subRepos: tab.subRepos,
         repoName: tab.repoName,
-        activeFile: "",
+        activeFile,
         savedState: {
           expandedDirs: tab.expandedDirs,
           manuallyCollapsed: tab.manuallyCollapsed,
