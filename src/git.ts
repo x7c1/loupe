@@ -10,15 +10,20 @@ const execFileAsync = promisify(execFile);
  */
 export async function findGitRepos(
   rootDir: string,
-  maxDepth: number = 5
+  maxDepth: number = 5,
+  excludeDirs: string[]
 ): Promise<string[]> {
   try {
+    const pruneExpr = excludeDirs.length > 0
+      ? `( ${excludeDirs.map(d => `-name ${d}`).join(" -o ")} ) -prune -o`
+      : "";
+
     const args = [
       rootDir,
       `-maxdepth ${maxDepth + 1}`,
-      "( -name node_modules -o -name target -o -name .gradle -o -name .cache ) -prune",
-      "-o -name .git ( -type d -o -type f ) -print",
-    ].flatMap(s => s.split(" "));
+      pruneExpr,
+      "-name .git ( -type d -o -type f ) -print",
+    ].flatMap(s => s.split(" ")).filter(s => s.length > 0);
 
     const { stdout } = await execFileAsync("find", args, {
       maxBuffer: 10 * 1024 * 1024,

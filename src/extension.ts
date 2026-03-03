@@ -106,6 +106,7 @@ async function scanRepos(): Promise<
 
   const config = vscode.workspace.getConfiguration("loupe");
   const maxDepth = config.get<number>("maxDepth", 5);
+  const excludeDirs = config.get<string[]>("excludeDirs", []);
   const multiWorkspace = workspaceFolders.length > 1;
 
   const repos: { path: string; label: string; description: string }[] = [];
@@ -118,7 +119,7 @@ async function scanRepos(): Promise<
     },
     async () => {
       const scanPromises = workspaceFolders.map(async (folder) => {
-        const found = await findGitRepos(folder.uri.fsPath, maxDepth);
+        const found = await findGitRepos(folder.uri.fsPath, maxDepth, excludeDirs);
         for (const repo of found) {
           const relPath = path.relative(folder.uri.fsPath, repo);
           repos.push({
@@ -174,9 +175,10 @@ async function loadFilesAndSubRepos(
     async () => {
       const config = vscode.workspace.getConfiguration("loupe");
       const maxDepth = config.get<number>("maxDepth", 5);
+      const excludeDirs = config.get<string[]>("excludeDirs", []);
       const [files, childRepos] = await Promise.all([
         listGitFiles(repoPath),
-        findGitRepos(repoPath, maxDepth),
+        findGitRepos(repoPath, maxDepth, excludeDirs),
       ]);
       // Exclude the repo itself, keep only nested sub-repos
       const subRepos = childRepos
