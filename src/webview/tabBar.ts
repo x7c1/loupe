@@ -42,7 +42,17 @@ export function renderTabBar(ctx: AppContext, tabBarEl: HTMLDivElement): void {
   if (activeEl) activeEl.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
-export function setupTabBarClick(ctx: AppContext, tabBarEl: HTMLDivElement): void {
+export function setupTabBar(ctx: AppContext, tabBarEl: HTMLDivElement): void {
+  setupTabBarClick(ctx, tabBarEl);
+  tabBarEl.addEventListener("wheel", (e: WheelEvent) => {
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      tabBarEl.scrollLeft += e.deltaY;
+    }
+  }, { passive: false });
+}
+
+function setupTabBarClick(ctx: AppContext, tabBarEl: HTMLDivElement): void {
   tabBarEl.addEventListener("click", (e: MouseEvent) => {
     const closeBtn = (e.target as HTMLElement).closest("[data-tab-close]");
     const tabEl = (e.target as HTMLElement).closest("[data-repo-path]") as HTMLElement | null;

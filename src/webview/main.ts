@@ -1,6 +1,6 @@
 import { setupEventHandlers } from "./events";
 import { setupMessageHandlers } from "./messageHandlers";
-import { setupTabBarClick } from "./tabBar";
+import { setupTabBar } from "./tabBar";
 import { RepoItem, FlatItem, TabInfo } from "./types";
 
 declare function acquireVsCodeApi(): {
@@ -26,7 +26,7 @@ const ctx = {
   manuallyCollapsed: new Set<string>(),
 };
 
-setupTabBarClick(ctx, tabBarEl);
+setupTabBar(ctx, tabBarEl);
 setupEventHandlers(ctx);
 setupMessageHandlers(ctx, tabBarEl);
 
