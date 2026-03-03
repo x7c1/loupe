@@ -195,6 +195,15 @@ window.addEventListener("message", (event: MessageEvent) => {
       if (ctx.mode === "files") focusFileInList(ctx, msg.activeFile);
       break;
 
+    case "triggerGoBack":
+      if (ctx.mode === "files") {
+        vscodeApi.postMessage({
+          type: "goBack",
+          currentState: collectCurrentState(),
+        });
+      }
+      break;
+
     case "updateTabs":
       ctx.tabs = msg.tabs;
       ctx.activeTabIndex = msg.activeIndex;

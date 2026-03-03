@@ -52,6 +52,7 @@ function setupClick(ctx: EventContext): void {
 function setupKeyboard(ctx: EventContext): void {
   ctx.searchInput.addEventListener("keydown", (e: KeyboardEvent) => {
     if (handleTabSwitch(e, ctx)) return;
+    if (handleGoBack(e, ctx)) return;
 
     if (e.key === "Escape") {
       e.preventDefault();
@@ -80,6 +81,7 @@ function setupKeyboard(ctx: EventContext): void {
   ctx.listContainer.tabIndex = 0;
   ctx.listContainer.addEventListener("keydown", (e: KeyboardEvent) => {
     if (handleTabSwitch(e, ctx)) return;
+    if (handleGoBack(e, ctx)) return;
 
     if (e.key === "Escape") {
       e.preventDefault();
@@ -94,6 +96,20 @@ function setupKeyboard(ctx: EventContext): void {
       ctx.searchInput.focus();
     }
   });
+}
+
+// --- Go back to repo list (Ctrl+Escape) ---
+
+function handleGoBack(e: KeyboardEvent, ctx: EventContext): boolean {
+  if (e.key !== "Escape" || !(e.ctrlKey || e.metaKey)) return false;
+  if (ctx.mode !== "files") return false;
+  e.preventDefault();
+  e.stopPropagation();
+  ctx.vscode.postMessage({
+    type: "goBack",
+    currentState: collectState(ctx),
+  });
+  return true;
 }
 
 // --- Tab switching ---
