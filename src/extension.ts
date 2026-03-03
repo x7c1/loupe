@@ -29,17 +29,19 @@ export function activate(context: vscode.ExtensionContext) {
 
       const matched = findRepoForActiveEditor(provider.getRepos());
       if (matched) {
-        // Switch repo if different from current selection
+        const activePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+        const activeFile = activePath
+          ? path.relative(matched.path, activePath)
+          : undefined;
         const current = provider.hasSelectedRepo()
           ? provider.getSelectedRepo()
           : null;
         if (!current || current.repoPath !== matched.path) {
-          const activePath = vscode.window.activeTextEditor?.document.uri.fsPath;
-          const activeFile = activePath
-            ? path.relative(matched.path, activePath)
-            : undefined;
           const { files, subRepos } = await loadFilesAndSubRepos(matched.path, matched.label);
           provider.setFiles(matched.path, matched.label, files, { activeFile, subRepos });
+        } else {
+          // Same repo already active — just focus the active file
+          provider.focusActiveFile(activeFile);
         }
       } else if (!provider.hasSelectedRepo()) {
         // No active file match and no repo selected - show repo list

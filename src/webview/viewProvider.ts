@@ -192,6 +192,11 @@ export class FileTreeViewProvider implements vscode.WebviewViewProvider {
     this.view?.webview.postMessage({ type: "focusInput" });
   }
 
+  public focusActiveFile(activeFile?: string): void {
+    if (!activeFile) return;
+    this.view?.webview.postMessage({ type: "focusFile", activeFile });
+  }
+
   private switchToTab(repoPath: string): void {
     const index = this.tabs.findIndex(t => t.repoPath === repoPath);
     if (index < 0) return;

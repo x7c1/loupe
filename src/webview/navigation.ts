@@ -1,10 +1,13 @@
 import { FlatItem } from "./types";
 
 /**
- * Find the index of the first item.
+ * Find the index of the first non-directory item.
+ * Falls back to 0 if all items are directories.
  */
 export function firstFileIndex(items: FlatItem[]): number {
-  return items.length > 0 ? 0 : -1;
+  if (items.length === 0) return -1;
+  const idx = items.findIndex(item => !item.isDir);
+  return idx !== -1 ? idx : 0;
 }
 
 /**
