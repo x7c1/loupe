@@ -1,15 +1,14 @@
-# Weekly update pull requests, on Monday a few hours before vesper lists the
-# updates it did not merge. Minor and patch updates of each ecosystem
-# arrive as one grouped pull request; major updates stay one pull request
-# each, so a failing one points at the dependency that broke. Security
-# updates are not grouped.
+# The day is cksum of "owner/repo" modulo 7 (0 = Monday), so that repositories
+# update on different days. The time is a few hours before vesper lists the
+# updates it did not merge. Major updates stay one pull request each, so a
+# failing one points at the dependency that broke.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-      day: monday
+      day: friday
       time: "04:00"
       timezone: Asia/Tokyo
     groups:
@@ -21,7 +20,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
+      day: friday
       time: "04:00"
       timezone: Asia/Tokyo
     groups:
@@ -43,7 +42,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
+      day: friday
       time: "04:00"
       timezone: Asia/Tokyo
     groups:
